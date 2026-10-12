@@ -31,7 +31,7 @@ Die hochgeladene Datei ist noch eine Excel-Datei. Skripte gehen nur mit echten G
 In `config.js` bei `SCRIPT_URL` die Web-App-URL eintragen (oder sie Claude schicken).
 
 ## Danach
-- Öffentlicher Plan: https://granny1990.github.io/SVW-Training/
-- Admin: https://granny1990.github.io/SVW-Training/admin.html
+- Öffentlicher Plan: https://granny1990.github.io/svw-training/
+- Admin: https://granny1990.github.io/svw-training/admin.html
 - Wer wann gespeichert hat, steht im Blatt **Protokoll**.
 - Passwort ändern oder Person hinzufügen: in `Code.gs` bei `ADMINS` ändern, dann **Bereitstellen → Bereitstellungen verwalten → Stift → Version: Neue Version → Bereitstellen**. Der Link bleibt gleich.
