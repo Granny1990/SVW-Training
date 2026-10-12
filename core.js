@@ -180,7 +180,8 @@ const PRINT_CSS = `
   @page{size:A4 landscape;margin:8mm}
   body > *:not(#printSheet){display:none!important}
   html,body{height:auto!important;background:#fff!important;overflow:visible!important}
-  #printSheet{display:block;color:#141a2b;font:8.5pt/1.25 "Barlow",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* Seite füllen: A4 quer (210 mm) minus 2 × 8 mm Rand; die Tabelle streckt sich auf die Resthöhe */
+  #printSheet{display:flex;flex-direction:column;height:193mm;color:#141a2b;font:8.5pt/1.25 "Barlow",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .pr-head{display:flex;align-items:center;gap:4mm;border-bottom:1mm solid #275aa2;padding-bottom:2mm;margin-bottom:2.5mm}
   .pr-head img{height:15mm;width:auto}
   .pr-head small{display:block;font:600 8pt/1 "Barlow Condensed",Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#275aa2}
@@ -188,7 +189,9 @@ const PRINT_CSS = `
   .pr-range{margin-left:auto;text-align:right;font:700 15pt/1.1 "Barlow Condensed",Arial,sans-serif}
   .pr-range small{color:#5b6478;letter-spacing:0;text-transform:none;font:500 8pt "Barlow",Arial,sans-serif;margin-top:1mm}
   .pr-draft{color:#b4530b!important;font-weight:700!important}
-  table.pr{width:100%;border-collapse:collapse;table-layout:fixed}
+  .pr-body{flex:1 1 auto;min-height:0;display:flex}
+  table.pr{width:100%;height:100%;border-collapse:collapse;table-layout:fixed}
+  .pr thead tr{height:1px}
   .pr th,.pr td{border:.25mm solid #c9d1e0;vertical-align:top;padding:1mm}
   .pr thead th{background:#275aa2;color:#fff;font:700 10.5pt/1 "Barlow Condensed",Arial,sans-serif;text-transform:uppercase;text-align:left;padding:1.6mm 1.4mm}
   .pr thead th small{font:500 8pt "Barlow",Arial,sans-serif;opacity:.85;margin-left:1mm;text-transform:none}
@@ -247,7 +250,7 @@ function printWeek(w, weekKey, info){
   }
   const foot = el("div",{class:"pr-foot"},
     el("span",{}, FOOTER, " Platzanteil: ½ · ¼ · ⅓/⅔ d.H. (der Hälfte)."));
-  const sheet = el("div",{id:"printSheet"}, head, el("table",{class:"pr"}, thead, tbody), foot);
+  const sheet = el("div",{id:"printSheet"}, head, el("div",{class:"pr-body"}, el("table",{class:"pr"}, thead, tbody)), foot);
   document.getElementById("printSheet")?.remove(); document.body.append(sheet);
   const title = document.title;
   document.title = `Trainingsplan SVW ${isoDate(mon)}`;       // Vorschlag für den Dateinamen
