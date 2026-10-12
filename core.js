@@ -181,23 +181,23 @@ const PRINT_CSS = `
   body > *:not(#printSheet){display:none!important}
   html,body{height:auto!important;background:#fff!important;overflow:visible!important}
   /* Seite füllen: A4 quer (210 mm) minus 2 × 8 mm Rand; die Tabelle streckt sich auf die Resthöhe */
-  #printSheet{display:flex;flex-direction:column;height:193mm;color:#141a2b;font:8.5pt/1.25 "Barlow",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #printSheet{display:flex;flex-direction:column;height:193mm;color:#141a2b;font:10pt/1.25 "Barlow",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .pr-head{display:flex;align-items:center;gap:4mm;border-bottom:1mm solid #275aa2;padding-bottom:2mm;margin-bottom:2.5mm}
   .pr-head img{height:15mm;width:auto}
   .pr-head small{display:block;font:600 8pt/1 "Barlow Condensed",Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#275aa2}
-  .pr-head b{display:block;font:700 20pt/1 "Barlow Condensed",Arial,sans-serif;text-transform:uppercase;margin-top:.6mm}
-  .pr-range{margin-left:auto;text-align:right;font:700 15pt/1.1 "Barlow Condensed",Arial,sans-serif}
+  .pr-head b{display:block;font:700 22pt/1 "Barlow Condensed",Arial,sans-serif;text-transform:uppercase;margin-top:.6mm}
+  .pr-range{margin-left:auto;text-align:right;font:700 17pt/1.1 "Barlow Condensed",Arial,sans-serif}
   .pr-range small{color:#5b6478;letter-spacing:0;text-transform:none;font:500 8pt "Barlow",Arial,sans-serif;margin-top:1mm}
   .pr-draft{color:#b4530b!important;font-weight:700!important}
   .pr-body{flex:1 1 auto;min-height:0;display:flex}
   table.pr{width:100%;height:100%;border-collapse:collapse;table-layout:fixed}
   .pr thead tr{height:1px}
   .pr th,.pr td{border:.25mm solid #c9d1e0;vertical-align:top;padding:1mm}
-  .pr thead th{background:#275aa2;color:#fff;font:700 10.5pt/1 "Barlow Condensed",Arial,sans-serif;text-transform:uppercase;text-align:left;padding:1.6mm 1.4mm}
-  .pr thead th small{font:500 8pt "Barlow",Arial,sans-serif;opacity:.85;margin-left:1mm;text-transform:none}
-  .pr th.pl{width:27mm;background:#f2f5fa;text-align:left;vertical-align:middle}
-  .pr th.pl b{display:block;font:700 10pt/1.05 "Barlow Condensed",Arial,sans-serif;text-transform:uppercase}
-  .pr th.pl small{display:block;font-weight:400;font-size:6.5pt;color:#5b6478;line-height:1.2;margin-top:.5mm}
+  .pr thead th{background:#275aa2;color:#fff;font:700 13pt/1 "Barlow Condensed",Arial,sans-serif;text-transform:uppercase;text-align:left;padding:1.6mm 1.4mm}
+  .pr thead th small{font:500 9.5pt "Barlow",Arial,sans-serif;opacity:.85;margin-left:1mm;text-transform:none}
+  .pr th.pl{width:31mm;background:#f2f5fa;text-align:left;vertical-align:middle}
+  .pr th.pl b{display:block;font:700 12.5pt/1.05 "Barlow Condensed",Arial,sans-serif;text-transform:uppercase}
+  .pr th.pl small{display:block;font-weight:400;font-size:7.5pt;color:#5b6478;line-height:1.2;margin-top:.5mm}
   .pr tr.pair-rasen td,.pr tr.pair-rasen th{background:#edf5ea}
   .pr tr.pair-kunst td,.pr tr.pair-kunst th{background:#eaf0f9}
   .pr tr.pair-rasen th.pl,.pr tr.pair-kunst th.pl{padding-left:2.8mm}
@@ -205,17 +205,17 @@ const PRINT_CSS = `
   .pr tr.pair-kunst th.pl{box-shadow:inset 1.4mm 0 0 #275aa2}
   .pr tr{break-inside:avoid}
   thead{display:table-header-group}
-  .pr-s{display:flex;flex-wrap:wrap;align-items:center;gap:0 1.2mm;border-radius:1mm;padding:.7mm 1.3mm;margin-bottom:.8mm}
-  .pr-s b{font:700 9.5pt/1.1 "Barlow Condensed",Arial,sans-serif}
-  .pr-s i{font-style:normal;font-size:7pt;opacity:.9}
-  .pr-s em{font:700 6.5pt/1 "Barlow Condensed",Arial,sans-serif;font-style:normal;letter-spacing:.06em;text-transform:uppercase;padding:.3mm .8mm;border-radius:.6mm}
-  .pr-s .t{margin-left:auto;font:600 8.5pt/1.1 "Barlow Condensed",Arial,sans-serif;white-space:nowrap}
-  .pr-s .sub{flex-basis:100%;font-size:6.8pt;line-height:1.2}
+  .pr-s{display:flex;flex-wrap:wrap;align-items:center;gap:0 1.5mm;border-radius:1.2mm;padding:1.1mm 1.8mm;margin-bottom:1.2mm}
+  .pr-s b{font:700 12.5pt/1.1 "Barlow Condensed",Arial,sans-serif}
+  .pr-s i{font-style:normal;font-size:8.5pt;opacity:.9}
+  .pr-s em{font:700 8pt/1 "Barlow Condensed",Arial,sans-serif;font-style:normal;letter-spacing:.06em;text-transform:uppercase;padding:.3mm .8mm;border-radius:.6mm}
+  .pr-s .t{margin-left:auto;font:600 11.5pt/1.1 "Barlow Condensed",Arial,sans-serif;white-space:nowrap}
+  .pr-s .sub{flex-basis:100%;font-size:8.5pt;line-height:1.2}
   .pr-s.off{background:#fff!important;color:#b3261e!important;box-shadow:inset 0 0 0 .25mm #b3261e}
   .pr-s.off b,.pr-s.off .t{text-decoration:line-through}
-  .pr-fill{font:600 8pt/1 "Barlow Condensed",Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:1.6mm 0;color:#b3261e}
+  .pr-fill{font:600 10pt/1 "Barlow Condensed",Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:1.6mm 0;color:#b3261e}
   .pr-fill.req{color:#5b6478}
-  .pr-foot{margin-top:2mm;font-size:7.5pt;color:#5b6478;display:flex;gap:4mm;justify-content:space-between}
+  .pr-foot{margin-top:2mm;font-size:8.5pt;color:#5b6478;display:flex;gap:4mm;justify-content:space-between}
 }`;
 function printWeek(w, weekKey, info){
   if (!document.getElementById("print-css")) document.head.append(el("style",{id:"print-css"}, PRINT_CSS));
