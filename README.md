@@ -2,7 +2,7 @@
 
 Wöchentlicher Trainingsplan mit Platzbelegung des SV Westfalia Rhynern.
 
-**Ansehen:** https://granny1990.github.io/svw-training/
+**Ansehen:** https://granny1990.github.io/SVW-Training/
 
 **Bearbeiten (Admin):** https://granny1990.github.io/SVW-Training/admin.html
 
