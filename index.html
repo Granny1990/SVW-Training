@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Trainingsplan SV Westfalia Rhynern</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: a club noticeboard for the phone. Sticky week + day bar, then a pitch-by-time
+   board (rows = Plätze, bars = Trainings), then one card per Platz with the detail. */
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --surface-2:#f5f7fb; --line:#d9dfea;
+  --fg:#141a2b; --muted:#5b6478; --navy:#13348f; --navy-ink:#ffffff;
+  --accent:#1f4fd6; --warn:#b4530b; --warn-bg:#fff1e3; --off:#b3261e; --off-bg:#fde9e7;
+  --hatch:#c8cfdd; --now:#e0262f; --chip:#e3e8f3;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1120; --surface:#151c2f; --surface-2:#1b2339; --line:#2a3452;
+  --fg:#e8ecf6; --muted:#9aa4bd; --navy:#1b3a9c; --navy-ink:#ffffff;
+  --accent:#7ea2ff; --warn:#ffb36b; --warn-bg:#3a2612; --off:#ff8a80; --off-bg:#3b1715;
+  --hatch:#36415f; --now:#ff5a62; --chip:#232d48; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1120; --surface:#151c2f; --surface-2:#1b2339; --line:#2a3452;
+  --fg:#e8ecf6; --muted:#9aa4bd; --navy:#1b3a9c; --navy-ink:#ffffff;
+  --accent:#7ea2ff; --warn:#ffb36b; --warn-bg:#3a2612; --off:#ff8a80; --off-bg:#3b1715;
+  --hatch:#36415f; --now:#ff5a62; --chip:#232d48; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.45 var(--body);margin:0}
+.wrap{max-width:860px;margin:0 auto;padding-inline:16px;padding-block:0 48px;display:flex;flex-direction:column;gap:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Header */
+.top{background:var(--navy);color:var(--navy-ink);margin-inline:-16px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:10px}
+.brand{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.brand h1{font:700 26px/1 var(--display);letter-spacing:.01em;margin:0;text-transform:uppercase;text-wrap:balance}
+.brand .club{font:600 12px/1 var(--display);letter-spacing:.14em;text-transform:uppercase;opacity:.8;margin-bottom:6px}
+.stand{font-size:12px;opacity:.85;text-align:right;white-space:nowrap}
+.weeknav{display:flex;align-items:center;gap:8px}
+.weeknav .range{flex:1;text-align:center;font:600 18px/1.1 var(--display);letter-spacing:.02em}
+.iconbtn{background:rgba(255,255,255,.14);border:0;color:inherit;width:36px;height:36px;border-radius:8px;font-size:18px;display:grid;place-items:center}
+.iconbtn:disabled{opacity:.3;cursor:default}
+
+/* Sticky controls */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin-inline:-16px;padding:10px 16px 8px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
+.days{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.day{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:6px 0;display:flex;flex-direction:column;align-items:center;gap:1px;position:relative}
+.day b{font:700 17px/1 var(--display);letter-spacing:.03em;text-transform:uppercase}
+.day small{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.day[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:var(--navy-ink)}
+.day[aria-pressed="true"] small{color:inherit;opacity:.8}
+.day .today{position:absolute;top:4px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--now)}
+.filters{display:flex;gap:8px;align-items:center}
+.filters select{flex:1;min-width:0;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:0 10px}
+.btn{height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:0 12px;font-weight:600;white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--off);border-color:var(--off)}
+.btn.on{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+
+/* Section heads */
+.sec{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:4px}
+.sec h2{font:700 20px/1.1 var(--display);text-transform:uppercase;letter-spacing:.03em;margin:0}
+.sec span{font-size:13px;color:var(--muted)}
+
+/* Board */
+.board{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 10px 10px;overflow-x:auto}
+.board-inner{min-width:300px;position:relative}
+.axis{display:grid;grid-template-columns:var(--lab) 1fr;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:4px}
+.axis .ticks{position:relative;height:14px}
+.axis .ticks span{position:absolute;transform:translateX(-50%)}
+.row{display:grid;grid-template-columns:var(--lab) 1fr;align-items:stretch;border-top:1px solid var(--line)}
+.row .lab{font:600 14px/1.1 var(--display);text-transform:uppercase;letter-spacing:.03em;padding:8px 6px 8px 0;display:flex;align-items:center}
+.track{position:relative;padding:5px 0}
+.grid-line{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
+.barslot{position:absolute;border:0;border-radius:6px;padding:3px 5px;text-align:left;overflow:hidden;display:flex;flex-direction:column;justify-content:center;line-height:1.05;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.barslot b{font:700 13px/1 var(--display);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barslot i{font-style:normal;font-size:10px;opacity:.85;font-variant-numeric:tabular-nums;white-space:nowrap}
+.barslot.off{background:repeating-linear-gradient(135deg,var(--off-bg) 0 6px,var(--surface) 6px 12px)!important;color:var(--off)!important;text-decoration:line-through}
+.barslot.dim{opacity:.22}
+.barslot.warn{box-shadow:inset 0 0 0 2px var(--warn)}
+.fill{position:absolute;left:0;right:0;top:5px;bottom:5px;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 13px/1 var(--display);letter-spacing:.06em;text-transform:uppercase}
+.fill.closed{background:repeating-linear-gradient(135deg,var(--off-bg) 0 7px,transparent 7px 14px);color:var(--off)}
+.fill.req{background:repeating-linear-gradient(135deg,var(--chip) 0 7px,transparent 7px 14px);color:var(--muted)}
+.nowline{position:absolute;top:0;bottom:0;width:2px;background:var(--now);z-index:2;pointer-events:none}
+.nowline::before{content:"jetzt";position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--now);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:10px;border-radius:3px;display:inline-block}
+
+/* Pitch cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.card h3{font:700 19px/1.05 var(--display);text-transform:uppercase;letter-spacing:.03em;margin:0}
+.card .area{font-size:12px;color:var(--muted);margin-top:2px}
+.pill{font:600 12px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;padding:5px 8px;border-radius:999px;white-space:nowrap}
+.pill.closed{background:var(--off-bg);color:var(--off)}
+.pill.req{background:var(--chip);color:var(--muted)}
+.list{display:flex;flex-direction:column;margin:0;padding:0;list-style:none}
+.item{display:grid;grid-template-columns:52px auto 1fr;gap:10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);min-width:0}
+.item:first-child{border-top:0}
+.item .time{font:600 16px/1 var(--display);font-variant-numeric:tabular-nums}
+.item .time small{display:block;font:500 11px/1.2 var(--body);color:var(--muted)}
+.tag{font:700 14px/1 var(--display);letter-spacing:.03em;padding:5px 8px;border-radius:6px;white-space:nowrap}
+.item .meta{font-size:13px;color:var(--muted);min-width:0;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.flag{font:600 11px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;padding:3px 6px;border-radius:4px}
+.flag.off{background:var(--off-bg);color:var(--off)}
+.flag.chg{background:var(--warn-bg);color:var(--warn)}
+.flag.warn{border:1px solid var(--warn);color:var(--warn)}
+.item.off .time,.item.off .tag{text-decoration:line-through;opacity:.6}
+.item.edit{cursor:pointer}
+.item.edit:hover{background:var(--surface-2)}
+.empty{font-size:13px;color:var(--muted);padding:4px 0}
+.cardtools{display:flex;gap:8px;flex-wrap:wrap}
+.cardtools .btn{height:34px;font-size:13px}
+
+/* Team agenda */
+.agenda{display:flex;flex-direction:column;gap:10px}
+.aday{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px;display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:start}
+.aday .dname{font:700 18px/1 var(--display);text-transform:uppercase}
+.aday .dname small{display:block;font:500 12px/1.4 var(--body);color:var(--muted);text-transform:none}
+.aday ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.aday li{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.aday .t{font:600 17px/1 var(--display);font-variant-numeric:tabular-nums}
+.aday .free{color:var(--muted);font-size:13px}
+
+/* Log + footer */
+.log{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.log ul{margin:6px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.log time{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:6px}
+.foot{font-size:12px;color:var(--muted);text-align:center}
+.editbanner{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+
+/* Sheet */
+.scrim{position:fixed;inset:0;background:rgba(5,10,25,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;max-height:92%;overflow:auto}
+.sheet h3{font:700 22px/1 var(--display);text-transform:uppercase;margin:0}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select{height:40px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);padding:0 10px;width:100%}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;height:38px;border:0;background:var(--surface-2);font-weight:600;font-size:14px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.sheet .actions{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.sheet .actions div{display:flex;gap:8px;margin-left:auto}
+.formerr{color:var(--off);font-size:13px}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion: no-preference){.barslot{transition:opacity .15s}}
+</style>
+<style>
+[hidden]{display:none!important}
+.status{font-size:13px;color:var(--muted);text-align:center}
+.status.err{color:var(--off)}
+.foot a{color:var(--accent)}
+</style>
+</head>
+<body>
+<!--
+  ============================================================
+  EINRICHTUNG (einmalig):
+  1. In Google Sheets: Datei > Freigeben > Im Web veröffentlichen
+     > Blatt "Belegung" > Format "CSV" > Veröffentlichen.
+  2. Den angezeigten Link unten bei CSV_URL eintragen.
+  3. Optional: Bearbeitungslink des Sheets bei EDIT_URL eintragen.
+  CSV_URL ist eingetragen (12.10.2026).
+  ============================================================
+-->
+<script>
+const CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTsJn-U8CsltLXoegVbvt5IdjqCm4IonPHYXs2ux0BX0q_g5KftEQiTBciG8bvutg/pub?gid=1557920811&single=true&output=csv";
+const EDIT_URL = "";
+</script>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div><div class="club">SV Westfalia Rhynern e.V.</div><h1>Trainings&shy;plan</h1></div>
+      <div class="stand" id="stand"></div>
+    </div>
+    <div class="weeknav">
+      <button class="iconbtn" id="prevW" aria-label="Vorige Woche">‹</button>
+      <div class="range" id="range"></div>
+      <button class="iconbtn" id="nextW" aria-label="Nächste Woche">›</button>
+    </div>
+  </header>
+
+  <div class="bar">
+    <div class="days" id="days" role="group" aria-label="Wochentag"></div>
+    <div class="filters">
+      <select id="team" aria-label="Mannschaft filtern"></select>
+      <button class="btn" id="copyBtn">Als Text</button>
+    </div>
+  </div>
+
+  <p class="status" id="status" hidden></p>
+  <main id="main" style="display:flex;flex-direction:column;gap:14px"></main>
+  <p class="foot" id="foot"></p>
+</div>
+
+<div id="sheetHost"></div>
+<div id="toastHost"></div>
+
+<script>
+const DEMO_CSV = "Woche ab (Montag),Tag,Platz,Mannschaft,Beginn,Dauer (Min.),Offenes Ende,Platzanteil,Status,Hinweis\n05.10.2026,Montag,Kleinspielfeld,E3,16:30,75,,ganz,findet statt,\n05.10.2026,Montag,Rasenplatz 1,1.M,18:45,105,ja,ganz,findet statt,\n05.10.2026,Montag,Rasenplatz 2,1.M,18:45,105,ja,ganz,findet statt,\n05.10.2026,Montag,Kunstrasen 1,D1,16:45,75,,ganz,findet statt,\n05.10.2026,Montag,Kunstrasen 1,C2,18:00,75,,ganz,findet statt,\n05.10.2026,Montag,Kunstrasen 1,A1,19:30,75,,ganz,findet statt,\n05.10.2026,Montag,Kunstrasen 2,C1,17:15,75,,ganz,findet statt,\n05.10.2026,Montag,Kunstrasen 2,B1,18:30,75,,ganz,findet statt,\n05.10.2026,Montag,Kunstrasen 2,A2,19:45,75,,ganz,findet statt,\n05.10.2026,Dienstag,Kleinspielfeld,,,,,,Platz gesperrt,\n05.10.2026,Dienstag,Rasenplatz 1,F2,16:45,75,,ganz,findet statt,\n05.10.2026,Dienstag,Rasenplatz 1,1.M,18:45,105,ja,ganz,findet statt,\n05.10.2026,Dienstag,Rasenplatz 2,F1,16:45,75,,ganz,findet statt,\n05.10.2026,Dienstag,Rasenplatz 2,1.M,18:45,105,ja,ganz,findet statt,\n05.10.2026,Dienstag,Kunstrasen 1,Minis,16:00,60,,ganz,findet statt,\n05.10.2026,Dienstag,Kunstrasen 1,D2,16:30,75,,ganz,findet statt,\n05.10.2026,Dienstag,Kunstrasen 1,C2,18:00,75,,ganz,findet statt,\n05.10.2026,Dienstag,Kunstrasen 1,2.M,19:30,75,,ganz,findet statt,\n05.10.2026,Dienstag,Kunstrasen 2,D3,16:30,75,,ganz,findet statt,\n05.10.2026,Dienstag,Kunstrasen 2,C1,18:00,75,,ganz,findet statt,\n05.10.2026,Dienstag,Kunstrasen 2,B2,19:15,75,,ganz,findet statt,\n05.10.2026,Mittwoch,Kleinspielfeld,,,,,,Platz gesperrt,\n05.10.2026,Mittwoch,Rasenplatz 1,1.M,18:45,105,ja,ganz,findet statt,\n05.10.2026,Mittwoch,Rasenplatz 2,1.M,18:45,105,ja,ganz,findet statt,\n05.10.2026,Mittwoch,Kunstrasen 1,B2,17:30,75,,ganz,findet statt,\n05.10.2026,Mittwoch,Kunstrasen 1,Alte Herren,19:00,75,,ganz,findet statt,\n05.10.2026,Mittwoch,Kunstrasen 1,Dritte,20:00,75,ja,ganz,findet statt,\n05.10.2026,Mittwoch,Kunstrasen 2,D1,16:45,75,,viertel,findet statt,\n05.10.2026,Mittwoch,Kunstrasen 2,E1,16:45,75,,viertel,findet statt,\n05.10.2026,Mittwoch,Kunstrasen 2,B1,18:15,75,,ganz,findet statt,\n05.10.2026,Mittwoch,Kunstrasen 2,A2,19:45,75,,ganz,findet statt,\n05.10.2026,Donnerstag,Kleinspielfeld,,,,,,Platz gesperrt,\n05.10.2026,Donnerstag,Rasenplatz 1,,,,,,Platz gesperrt,\n05.10.2026,Donnerstag,Rasenplatz 2,Walking Football,18:45,75,,ganz,findet statt,\n05.10.2026,Donnerstag,Kunstrasen 1,E3,16:30,75,,viertel,findet statt,\n05.10.2026,Donnerstag,Kunstrasen 1,F1,16:45,75,,viertel,findet statt,\n05.10.2026,Donnerstag,Kunstrasen 1,C2,18:00,75,,ganz,findet statt,\n05.10.2026,Donnerstag,Kunstrasen 1,A1,19:30,75,,ganz,findet statt,\n05.10.2026,Donnerstag,Kunstrasen 2,D1,16:45,75,,ganz,findet statt,\n05.10.2026,Donnerstag,Kunstrasen 2,C1,18:00,75,,ganz,findet statt,\n05.10.2026,Donnerstag,Kunstrasen 2,A2,19:30,75,,ganz,findet statt,\n05.10.2026,Freitag,Kleinspielfeld,F2,16:45,75,,ganz,findet statt,\n05.10.2026,Freitag,Rasenplatz 1,1.M,18:00,105,ja,ganz,findet statt,\n05.10.2026,Freitag,Rasenplatz 2,E1,16:45,75,,ganz,findet statt,\n05.10.2026,Freitag,Rasenplatz 2,1.M,18:00,105,ja,ganz,findet statt,\n05.10.2026,Freitag,Kunstrasen 1,D3,16:30,75,,ganz,findet statt,\n05.10.2026,Freitag,Kunstrasen 1,B2,18:00,75,,ganz,findet statt,\n05.10.2026,Freitag,Kunstrasen 1,A1,19:30,75,,ganz,findet statt,\n05.10.2026,Freitag,Kunstrasen 2,D2,16:30,75,,viertel,findet statt,\n05.10.2026,Freitag,Kunstrasen 2,E2,16:30,75,,viertel,findet statt,\n05.10.2026,Freitag,Kunstrasen 2,B1,18:00,75,,ganz,findet statt,\n05.10.2026,Freitag,Kunstrasen 2,A1,19:30,75,,ganz,findet statt,\n";
+const PITCHES = [
+  {id:"kf", short:"Klein",   name:"Kleinspielfeld", area:"Westfalia Sportpark"},
+  {id:"r1", short:"Rasen 1", name:"Rasenplatz 1",   area:"Westfalia Sportpark · Vereinsheimseite"},
+  {id:"r2", short:"Rasen 2", name:"Rasenplatz 2",   area:"Westfalia Sportpark · Rhynernseite"},
+  {id:"st", short:"Stadion", name:"Stadion",        area:"Kümpel-Hellmeister-Arena", request:true},
+  {id:"k1", short:"Kunst 1", name:"Kunstrasen 1",   area:"Westfalia Campus powered by Munk · Vereinsheimseite"},
+  {id:"k2", short:"Kunst 2", name:"Kunstrasen 2",   area:"Westfalia Campus powered by Munk · Rhynernseite"}
+];
+const FOOTER = "Trainingszeit 75 min. Änderungen witterungsbedingt vorbehalten.";
+const DAYS = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag"];
+const DSHORT = ["Mo","Di","Mi","Do","Fr"];
+const TEAM_COLORS = {
+  "A1":["#2fae3c","#0d2410"], "A2":["#8fd3c9","#0f2b27"],
+  "B1":["#ee8a2a","#2b1500"], "B2":["#7f55c4","#ffffff"],
+  "C1":["#f1cd1f","#2a2300"], "C2":["#7c1e3f","#ffffff"],
+  "D1":["#d92aa8","#ffffff"], "D2":["#ea5b1f","#ffffff"], "D3":["#1aa6a2","#ffffff"],
+  "1.M":["#5d6577","#ffffff"], "2.M":["#2b313e","#ffffff"], "Dritte":["#3c4a6b","#ffffff"],
+  "Alte Herren":["#8a6d45","#ffffff"], "Walking Football":["#5f7f3a","#ffffff"],
+  "Minis":["#f3a6c4","#3a0f20"]
+};
+const YOUTH_DEFAULT = ["#c9d3e6","#16203a"];
+const SHARE_LABEL = {"1":"ganzer Platz","1/2":"½ Platz","1/4":"¼ Platz"};
+
+let plan = {weeks:{}}; let loadedAt = null; let demo = !CSV_URL;
+let state = {week:null, day:0, team:""};
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const el = (tag, attrs={}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v;
+    else if (k === "style") n.style.cssText = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (v === true) n.setAttribute(k, "");
+    else if (v !== false && v != null) n.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) n.append(c.nodeType ? c : document.createTextNode(c));
+  return n;
+};
+const toMin = t => { const [h,m] = t.split(":").map(Number); return h*60+m; };
+const fmt = m => `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
+const pad = n => String(n).padStart(2,"0");
+const parseISO = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const dm = d => `${pad(d.getDate())}.${pad(d.getMonth()+1)}.`;
+const mondayOf = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return addDays(x, -((x.getDay()+6)%7)); };
+const colorOf = team => TEAM_COLORS[team] || YOUTH_DEFAULT;
+const W = () => plan.weeks[state.week];
+const weekKeys = () => Object.keys(plan.weeks).sort();
+const pitch = id => PITCHES.find(p => p.id === id);
+const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+                set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+function toast(msg, ms=2600){
+  const h = $("#toastHost"); h.replaceChildren(el("div",{class:"toast",role:"status"},msg));
+  clearTimeout(toast.t); toast.t = setTimeout(()=>h.replaceChildren(), ms);
+}
+
+/* ---------- CSV → plan ---------- */
+function parseCSV(text){
+  const rows = []; let row = [], f = "", q = false;
+  for (let i=0; i<text.length; i++){
+    const c = text[i];
+    if (q){ if (c === '"'){ if (text[i+1] === '"'){ f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ""; }
+    else if (c === '\n' || c === '\r'){ if (c === '\r' && text[i+1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ""; }
+    else f += c;
+  }
+  if (f !== "" || row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+const norm = s => (s||"").trim().toLowerCase();
+function parseDate(v){
+  v = (v||"").trim(); let m;
+  if ((m = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/))) return new Date(+(m[3].length===2?"20"+m[3]:m[3]), +m[2]-1, +m[1]);
+  if ((m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return new Date(+m[1], +m[2]-1, +m[3]);
+  if ((m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) return new Date(+m[3], +m[1]-1, +m[2]);
+  if (/^\d{5}$/.test(v)) { const d = new Date(1899,11,30); d.setDate(d.getDate()+ +v); return d; }
+  return null;
+}
+function buildPlan(text){
+  const rows = parseCSV(text).filter(r => r.some(c => c.trim() !== ""));
+  if (!rows.length) throw new Error("leer");
+  const H = rows[0].map(norm);
+  const col = name => H.findIndex(h => h.startsWith(name));
+  const C = {w:col("woche"), d:col("tag"), p:col("platz"), team:col("mannschaft"), t:col("beginn"),
+             dur:col("dauer"), ab:col("offenes"), share:col("platzanteil"), st:col("status"), note:col("hinweis")};
+  if (C.w<0 || C.d<0 || C.p<0) throw new Error("spalten");
+  const weeks = {}; let n = 0;
+  for (const r of rows.slice(1)){
+    const date = parseDate(r[C.w]); if (!date) continue;
+    const key = isoDate(mondayOf(date));
+    const d = DAYS.findIndex(x => norm(x) === norm(r[C.d]) || norm(x).slice(0,2) === norm(r[C.d]).slice(0,2));
+    const p = PITCHES.find(x => norm(x.name) === norm(r[C.p]));
+    if (d < 0 || !p) continue;
+    const wk = weeks[key] ||= {closed:{}, slots:[]};
+    const status = norm(r[C.st]);
+    if (status.startsWith("platz gesperrt") || status === "gesperrt"){ wk.closed[`${p.id}-${d}`] = "Gesperrt"; continue; }
+    const tm = (r[C.t]||"").match(/(\d{1,2})[:.](\d{2})/); const team = (r[C.team]||"").trim();
+    if (!tm || !team) continue;
+    const share = {halb:"1/2", viertel:"1/4"}[norm(r[C.share])];
+    const dur = parseInt(r[C.dur],10);
+    wk.slots.push({id:"r"+(n++), d, p:p.id, team, t:`${pad(+tm[1])}:${tm[2]}`, dur: dur>=15 && dur<=300 ? dur : 75,
+      ab: norm(r[C.ab]) === "ja", share, status: status === "abgesagt" ? "off" : undefined, note:(r[C.note]||"").trim() || undefined});
+  }
+  if (!Object.keys(weeks).length) throw new Error("keine Daten");
+  return {weeks};
+}
+
+/* ---------- logic ---------- */
+function conflicts(slots){
+  const bad = new Set(); const full = s => !s.share;
+  for (let i=0;i<slots.length;i++) for (let j=i+1;j<slots.length;j++){
+    const a=slots[i], b=slots[j];
+    if (a.p!==b.p || a.d!==b.d || a.status==="off" || b.status==="off" || (!full(a) && !full(b))) continue;
+    const as=toMin(a.t), ae=as+a.dur, bs=toMin(b.t), be=bs+b.dur;
+    if (as<be && bs<ae){ bad.add(a.id); bad.add(b.id); }
+  }
+  return bad;
+}
+function lanes(slots){
+  const sorted=[...slots].sort((a,b)=>toMin(a.t)-toMin(b.t)); const ends=[]; const out=new Map();
+  for (const s of sorted){ const st=toMin(s.t); let l=ends.findIndex(e=>e<=st); if(l<0){l=ends.length;ends.push(0);} ends[l]=st+s.dur; out.set(s.id,l); }
+  return {map:out, count:Math.max(1,ends.length)};
+}
+function pickWeek(){
+  const now = new Date(); const wd = now.getDay();
+  const mon = (wd===0||wd===6) ? addDays(mondayOf(now),7) : mondayOf(now);
+  const key = isoDate(mon); const keys = weekKeys();
+  if (plan.weeks[key]) return key;
+  const past = keys.filter(k => k <= key); return past.length ? past[past.length-1] : keys[0];
+}
+function pickDay(){
+  const now = new Date(); const d = (now.getDay()+6)%7;
+  return (isoDate(mondayOf(now))===state.week && d<5) ? d : 0;
+}
+function teamSort(a,b){
+  const rank = t => /^[A-F]\d$/.test(t) ? "0"+t : /^\d\.M$/.test(t) ? "1"+t : "2"+t;
+  return rank(a).localeCompare(rank(b),"de");
+}
+
+/* ---------- render ---------- */
+function render(){
+  if (!state.week || !W()) return;
+  const mon = parseISO(state.week); const fri = addDays(mon,4);
+  $("#range").textContent = `${dm(mon)} – ${dm(fri)}${fri.getFullYear()}`;
+  const keys = weekKeys(); const i = keys.indexOf(state.week);
+  $("#prevW").disabled = i<=0; $("#nextW").disabled = i>=keys.length-1;
+  $("#stand").replaceChildren(demo ? "Beispieldaten" : "Stand", el("br"),
+    demo ? "" : `${pad(loadedAt.getHours())}:${pad(loadedAt.getMinutes())} Uhr`);
+
+  const todayKey = isoDate(new Date());
+  $("#days").replaceChildren(...DSHORT.map((n,d) => {
+    const date = addDays(mon,d);
+    return el("button",{class:"day","aria-pressed":String(!state.team && state.day===d),onclick:()=>{state.team="";store.set("pp-team","");state.day=d;render();}},
+      isoDate(date)===todayKey ? el("span",{class:"today","aria-label":"heute"}) : null,
+      el("b",{},n), el("small",{},dm(date)));
+  }));
+
+  const teams = [...new Set(Object.values(plan.weeks).flatMap(x=>x.slots.map(s=>s.team)))].sort(teamSort);
+  const sel = $("#team");
+  sel.replaceChildren(el("option",{value:""},"Alle Mannschaften · Tagesansicht"), ...teams.map(t=>el("option",{value:t},`${t} · meine Woche`)));
+  sel.value = teams.includes(state.team) ? state.team : ""; state.team = sel.value;
+
+  const main = $("#main"); main.replaceChildren();
+  if (state.team) renderTeam(main); else renderDay(main);
+  const foot = $("#foot"); foot.replaceChildren(FOOTER);
+  if (EDIT_URL) foot.append(" ", el("a",{href:EDIT_URL,target:"_blank",rel:"noopener"},"Plan bearbeiten (nur Trainer)"));
+}
+
+function renderDay(main){
+  const w = W(); const d = state.day; const date = addDays(parseISO(state.week), d);
+  const slots = w.slots.filter(s=>s.d===d); const bad = conflicts(w.slots);
+  main.append(el("div",{class:"sec"}, el("h2",{},`${DAYS[d]}, ${dm(date)}`),
+    el("span",{}, `${slots.filter(s=>s.status!=="off").length} Trainings`)));
+  main.append(boardView(slots, d, bad));
+  main.append(el("div",{class:"sec"}, el("h2",{},"Plätze im Detail")));
+  const cards = el("div",{class:"cards"});
+  for (const p of PITCHES){
+    const ps = slots.filter(s=>s.p===p.id).sort((a,b)=>toMin(a.t)-toMin(b.t));
+    const closed = w.closed[`${p.id}-${d}`];
+    const list = el("ul",{class:"list"});
+    if (!ps.length) list.append(el("li",{class:"empty"}, closed ? "Platz an diesem Tag gesperrt." : p.request ? "Belegung nach Rücksprache mit dem Vorstand." : "Kein Training eingetragen."));
+    for (const s of ps) list.append(itemView(s, bad));
+    cards.append(el("article",{class:"card"},
+      el("header",{}, el("div",{}, el("h3",{},p.name), el("div",{class:"area"},p.area)),
+        closed ? el("span",{class:"pill closed"},closed) : p.request ? el("span",{class:"pill req"},"nach Rücksprache") : null),
+      list));
+  }
+  main.append(cards);
+}
+
+function itemView(s, bad){
+  const [bg,fg] = colorOf(s.team); const st = toMin(s.t);
+  const meta = el("div",{class:"meta"});
+  if (s.share) meta.append(el("span",{},SHARE_LABEL[s.share]));
+  if (s.note) meta.append(el("span",{},s.note));
+  if (s.status==="off") meta.append(el("span",{class:"flag off"},"Abgesagt"));
+  if (bad.has(s.id)) meta.append(el("span",{class:"flag warn",title:"Überschneidung mit einem anderen Team auf demselben Platz"},"Überschneidung"));
+  return el("li",{class:"item"+(s.status==="off"?" off":"")},
+    el("div",{class:"time"}, (s.ab?"ab ":"")+s.t, el("small",{}, s.ab ? "" : `bis ${fmt(st+s.dur)}`)),
+    el("span",{class:"tag",style:`background:${bg};color:${fg}`}, s.team), meta);
+}
+
+function boardView(slots, d, bad){
+  const w = W(); const all = w.slots;
+  let lo = Math.min(16*60, ...all.map(s=>toMin(s.t))); let hi = Math.max(21*60, ...all.map(s=>toMin(s.t)+s.dur));
+  lo = Math.floor(lo/60)*60; hi = Math.ceil(hi/60)*60; const span = hi-lo;
+  const pct = m => ((m-lo)/span*100);
+  const box = el("div",{class:"board"}); const inner = el("div",{class:"board-inner",style:"--lab:62px"});
+  const ticks = el("div",{class:"ticks"});
+  for (let m=lo; m<=hi; m+=60) ticks.append(el("span",{style:`left:${pct(m)}%`}, String(m/60)));
+  inner.append(el("div",{class:"axis"}, el("span",{}), ticks));
+  const now = new Date(); const showNow = isoDate(addDays(parseISO(state.week),d))===isoDate(now);
+  const nowM = now.getHours()*60+now.getMinutes();
+  for (const p of PITCHES){
+    const ps = slots.filter(s=>s.p===p.id); const {map,count} = lanes(ps);
+    const LH = 34, GAP = 3; const h = count*LH + (count-1)*GAP;
+    const track = el("div",{class:"track",style:`height:${h+10}px`});
+    for (let m=lo+60; m<hi; m+=60) track.append(el("div",{class:"grid-line",style:`left:${pct(m)}%`}));
+    const closed = w.closed[`${p.id}-${d}`];
+    if (closed) track.append(el("div",{class:"fill closed"},closed));
+    else if (p.request && !ps.length) track.append(el("div",{class:"fill req"},"nach Rücksprache"));
+    for (const s of ps){
+      const [bg,fg] = colorOf(s.team); const st = toMin(s.t); const l = map.get(s.id);
+      track.append(el("button",{class:"barslot"+(s.status==="off"?" off":"")+(bad.has(s.id)?" warn":""),
+        style:`left:${pct(st)}%;width:calc(${(s.dur/span*100)}% - 2px);top:${5+l*(LH+GAP)}px;height:${LH}px;background:${bg};color:${fg}`,
+        title:`${s.team} ${s.ab?"ab ":""}${s.t}${s.ab?"":"–"+fmt(st+s.dur)}`,
+        "aria-label":`${s.team}, ${p.name}, ${s.ab?"ab ":""}${s.t} Uhr. Antippen zeigt die Woche dieses Teams.`,
+        onclick:()=>focusTeam(s.team)},
+        el("b",{},s.team), el("i",{}, (s.ab?"ab ":"")+s.t+(s.share?" · "+(s.share==="1/4"?"¼":"½"):""))));
+    }
+    if (showNow && nowM>=lo && nowM<=hi) track.append(el("div",{class:"nowline",style:`left:${pct(nowM)}%`}));
+    inner.append(el("div",{class:"row"}, el("div",{class:"lab"},p.short), track));
+  }
+  box.append(inner, el("div",{class:"legend"},
+    el("span",{}, el("i",{class:"sw",style:"background:repeating-linear-gradient(135deg,var(--off-bg) 0 4px,var(--surface) 4px 8px);border:1px solid var(--off)"}),"gesperrt / abgesagt"),
+    el("span",{}, el("i",{class:"sw",style:"border:2px solid var(--warn)"}),"Überschneidung prüfen"),
+    el("span",{}, "Team antippen = Woche dieses Teams")));
+  return box;
+}
+
+function focusTeam(t){ state.team=t; store.set("pp-team",t); render(); window.scrollTo({top:0,behavior:"smooth"}); }
+
+function renderTeam(main){
+  const w = W(); const t = state.team; const mon = parseISO(state.week);
+  const mine = w.slots.filter(s=>s.team===t); const [bg,fg] = colorOf(t); const bad = conflicts(w.slots);
+  main.append(el("div",{class:"sec"}, el("h2",{}, el("span",{class:"tag",style:`background:${bg};color:${fg};margin-right:8px`},t), "Trainingswoche"),
+    el("span",{}, `${mine.filter(s=>s.status!=="off").length} Einheiten`)));
+  const ag = el("div",{class:"agenda"});
+  for (let d=0; d<5; d++){
+    const ds = mine.filter(s=>s.d===d).sort((a,b)=>toMin(a.t)-toMin(b.t));
+    const ul = el("ul",{});
+    if (!ds.length) ul.append(el("li",{class:"free"},"kein Training"));
+    for (const s of ds){
+      const li = el("li",{}, el("span",{class:"t",style:s.status==="off"?"text-decoration:line-through;opacity:.6":""}, (s.ab?"ab ":"")+s.t),
+        el("span",{}, pitch(s.p).name + (s.share ? ` (${SHARE_LABEL[s.share]})` : "")));
+      if (s.note) li.append(el("span",{class:"free"},s.note));
+      if (s.status==="off") li.append(el("span",{class:"flag off"},"Abgesagt"));
+      if (w.closed[`${s.p}-${d}`]) li.append(el("span",{class:"flag off"},"Platz gesperrt"));
+      if (bad.has(s.id)) li.append(el("span",{class:"flag warn"},"Überschneidung"));
+      ul.append(li);
+    }
+    ag.append(el("div",{class:"aday"}, el("div",{class:"dname"},DSHORT[d], el("small",{},dm(addDays(mon,d)))), ul));
+  }
+  main.append(ag, el("button",{class:"btn",style:"align-self:flex-start",onclick:()=>{state.team="";store.set("pp-team","");render();}},"Alle Plätze anzeigen"));
+}
+
+/* ---------- WhatsApp text ---------- */
+function planText(){
+  const w = W(); const mon = parseISO(state.week);
+  const sh = s => s.share ? ` (${s.share==="1/4"?"¼":"½"})` : "";
+  if (state.team){
+    const out = [`*${state.team} – Training ${dm(mon)}–${dm(addDays(mon,4))}*`];
+    for (let d=0; d<5; d++) for (const s of w.slots.filter(x=>x.team===state.team && x.d===d).sort((a,b)=>toMin(a.t)-toMin(b.t)))
+      out.push(`${DSHORT[d]} ${dm(addDays(mon,d))}: ${(s.ab?"ab ":"")+s.t}, ${pitch(s.p).name}${s.status==="off"?" – ABGESAGT":""}`);
+    return out.join("\n");
+  }
+  const d = state.day; const out = [`*Platzbelegung ${DAYS[d]}, ${dm(addDays(mon,d))}*`];
+  for (const p of PITCHES){
+    const ps = w.slots.filter(s=>s.p===p.id && s.d===d).sort((a,b)=>toMin(a.t)-toMin(b.t));
+    const closed = w.closed[`${p.id}-${d}`];
+    if (!ps.length && !closed && !p.request) continue;
+    out.push(`\n_${p.name}_` + (closed ? ` – ${closed}` : p.request && !ps.length ? " – nach Rücksprache" : ""));
+    ps.forEach(s=>out.push(`${(s.ab?"ab ":"")+s.t} ${s.team}${sh(s)}${s.status==="off"?" – ABGESAGT":""}${s.note?" – "+s.note:""}`));
+  }
+  return out.join("\n");
+}
+async function copyText(){
+  const txt = planText();
+  try { await navigator.clipboard.writeText(txt); toast("Text kopiert – in WhatsApp einfügen"); }
+  catch {
+    const ta = el("textarea",{id:"copyArea",style:"width:100%;min-height:220px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);padding:10px"}); ta.value = txt;
+    const close = () => $("#sheetHost").replaceChildren();
+    $("#sheetHost").replaceChildren(el("div",{class:"scrim",onclick:e=>{ if(e.target===e.currentTarget) close(); }},
+      el("div",{class:"sheet"}, el("h3",{},"Text markieren und kopieren"), ta, el("div",{class:"actions"}, el("div",{}, el("button",{class:"btn primary",onclick:close},"Schließen"))))));
+    ta.focus(); ta.select();
+  }
+}
+
+/* ---------- loading ---------- */
+function setStatus(msg, err){ const s = $("#status"); s.hidden = !msg; s.textContent = msg||""; s.classList.toggle("err", !!err); }
+async function load(){
+  try {
+    let text;
+    if (CSV_URL){
+      const r = await fetch(CSV_URL + (CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
+      if (!r.ok) throw new Error("http");
+      text = await r.text();
+    } else text = DEMO_CSV;
+    const fresh = buildPlan(text);
+    const keepWeek = state.week && fresh.weeks[state.week];
+    plan = fresh; loadedAt = new Date();
+    if (!keepWeek){ state.week = pickWeek(); state.day = pickDay(); }
+    setStatus(""); render();
+  } catch (e) {
+    setStatus(plan.weeks && Object.keys(plan.weeks).length
+      ? "Aktualisieren hat nicht geklappt. Angezeigt wird der zuletzt geladene Stand."
+      : "Der Trainingsplan konnte nicht geladen werden. Bitte später erneut versuchen.", true);
+  }
+}
+
+$("#prevW").onclick = () => { const k = weekKeys(); state.week = k[k.indexOf(state.week)-1]; render(); };
+$("#nextW").onclick = () => { const k = weekKeys(); state.week = k[k.indexOf(state.week)+1]; render(); };
+$("#team").onchange = e => { state.team = e.target.value; store.set("pp-team", state.team); render(); };
+$("#copyBtn").onclick = copyText;
+state.team = store.get("pp-team") || "";
+setStatus("Trainingsplan wird geladen …");
+load();
+setInterval(load, 5*60*1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && loadedAt && Date.now()-loadedAt > 60000) load(); });
+</script>
+</body>
+</html>
