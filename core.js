@@ -3,11 +3,11 @@
 const CFG = window.SVW_CONFIG || {};
 const PITCHES = [
   {id:"kf", short:"Klein",   name:"Kleinspielfeld", area:"Westfalia Sportpark"},
-  {id:"r1", short:"Rasen 1", name:"Rasenplatz 1",   area:"Sportpark · Vereinsheimseite"},
-  {id:"r2", short:"Rasen 2", name:"Rasenplatz 2",   area:"Sportpark · Rhynernseite"},
+  {id:"r1", short:"Rasen 1", name:"Rasenplatz 1",   area:"Sportpark · Vereinsheimseite", pair:"rasen"},
+  {id:"r2", short:"Rasen 2", name:"Rasenplatz 2",   area:"Sportpark · Rhynernseite", pair:"rasen"},
   {id:"st", short:"Stadion", name:"Stadion",        area:"Kümpel-Hellmeister-Arena", request:true},
-  {id:"k1", short:"Kunst 1", name:"Kunstrasen 1",   area:"Campus powered by Munk · Vereinsheimseite"},
-  {id:"k2", short:"Kunst 2", name:"Kunstrasen 2",   area:"Campus powered by Munk · Rhynernseite"}
+  {id:"k1", short:"Kunst 1", name:"Kunstrasen 1",   area:"Campus powered by Munk · Vereinsheimseite", pair:"kunst"},
+  {id:"k2", short:"Kunst 2", name:"Kunstrasen 2",   area:"Campus powered by Munk · Rhynernseite", pair:"kunst"}
 ];
 const TRAIN_DUR = 90, GAME_DUR = 120;
 const FOOTER = `Trainingszeit ${TRAIN_DUR} min. Änderungen witterungsbedingt vorbehalten.`;
@@ -67,6 +67,8 @@ function colorOf(team){
 }
 const gameLabel = s => "Spiel" + (s.opp ? " gg. " + s.opp : "");
 const pitch = id => PITCHES.find(p => p.id === id);
+/* Zusammengehörige Plätze (Rasen 1+2, Kunstrasen 1+2) werden farblich als Block dargestellt. */
+const pairCls = p => p.pair ? " pair-" + p.pair : "";
 const byTime = (a,b) => toMin(a.t)-toMin(b.t);
 const startLabel = s => (s.ab ? "ab " : "") + s.t;
 const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } },

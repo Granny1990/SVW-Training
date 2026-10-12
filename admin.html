@@ -17,7 +17,7 @@
   --bg:#edf2f8; --surface:#ffffff; --surface-2:#f5f7fb; --line:#dde2ec; --line-2:#c9d1e0;
   --fg:#141a2b; --muted:#5b6478; --navy:#275aa2; --navy-ink:#ffffff;
   --accent:#275aa2; --accent-soft:#e2ebf6; --warn:#b4530b; --warn-bg:#fff1e3; --off:#b3261e; --off-bg:#fde9e7;
-  --chip:#e3e8f3; --ok:#1d7a3a; --today:#e3ecf7;
+  --chip:#e3e8f3; --ok:#1d7a3a; --today:#e3ecf7; --ring:rgba(0,0,0,.08); --rasen-bg:#edf5ea; --rasen-bar:#4a9a52; --kunst-bg:#eaf0f9; --kunst-bar:#275aa2;
   --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
@@ -26,12 +26,12 @@
   --bg:#0c1120; --surface:#141b2d; --surface-2:#1a2238; --line:#252f4a; --line-2:#323e5e;
   --fg:#e8ecf6; --muted:#9aa4bd; --navy:#1f4f93; --navy-ink:#ffffff;
   --accent:#8db4ea; --accent-soft:#1a2d4c; --warn:#ffb36b; --warn-bg:#3a2612; --off:#ff8a80; --off-bg:#3b1715;
-  --chip:#232d48; --ok:#5fd38a; --today:#1b2645; color-scheme:dark}}
+  --chip:#232d48; --ok:#5fd38a; --today:#1b2645; --ring:rgba(255,255,255,.22); --rasen-bg:#15241d; --rasen-bar:#62b56c; --kunst-bg:#152039; --kunst-bar:#7aa4e6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0c1120; --surface:#141b2d; --surface-2:#1a2238; --line:#252f4a; --line-2:#323e5e;
   --fg:#e8ecf6; --muted:#9aa4bd; --navy:#1f4f93; --navy-ink:#ffffff;
   --accent:#8db4ea; --accent-soft:#1a2d4c; --warn:#ffb36b; --warn-bg:#3a2612; --off:#ff8a80; --off-bg:#3b1715;
-  --chip:#232d48; --ok:#5fd38a; --today:#1b2645; color-scheme:dark}
+  --chip:#232d48; --ok:#5fd38a; --today:#1b2645; --ring:rgba(255,255,255,.22); --rasen-bg:#15241d; --rasen-bar:#62b56c; --kunst-bg:#152039; --kunst-bar:#7aa4e6; color-scheme:dark}
 
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -80,7 +80,7 @@ button{cursor:pointer}
 .side h2{margin:0;font:700 15px/1 var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .side .hint{font-size:12px;color:var(--muted);line-height:1.35}
 .palette{display:flex;flex-direction:column;gap:5px}
-.pchip{display:flex;align-items:center;justify-content:space-between;gap:6px;border-radius:6px;padding:7px 9px;font:700 15px/1 var(--display);letter-spacing:.03em;cursor:grab;touch-action:none;user-select:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.pchip{display:flex;align-items:center;justify-content:space-between;gap:6px;border-radius:6px;padding:7px 9px;font:700 15px/1 var(--display);letter-spacing:.03em;cursor:grab;touch-action:none;user-select:none;box-shadow:inset 0 0 0 1px var(--ring)}
 .pchip small{font:500 11px var(--body);opacity:.8}
 .addteam{display:flex;gap:6px}
 .addteam input{flex:1;min-width:0;height:32px;border-radius:7px;border:1px solid var(--line-2);background:var(--surface-2);padding:0 8px}
@@ -108,7 +108,7 @@ button{cursor:pointer}
 .tool{white-space:nowrap;height:24px;border-radius:6px;border:1px solid var(--line-2);background:var(--surface);font-size:12px;padding:0 7px;color:var(--muted)}
 .tool:hover{color:var(--fg)}
 .closedlabel{font:600 13px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--off);text-align:center;padding:6px 0}
-.slot{display:flex;align-items:center;gap:6px;border-radius:6px;padding:6px 8px;min-width:0;cursor:grab;touch-action:none;user-select:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);flex-wrap:wrap}
+.slot{display:flex;align-items:center;gap:6px;border-radius:6px;padding:6px 8px;min-width:0;cursor:grab;touch-action:none;user-select:none;box-shadow:inset 0 0 0 1px var(--ring);flex-wrap:wrap}
 .slot b{font:700 15px/1 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .slot span{margin-left:auto;font:600 14px/1 var(--display);font-variant-numeric:tabular-nums;white-space:nowrap}
 .slot i{font-style:normal;font-size:11px;opacity:.85}
@@ -120,7 +120,14 @@ button{cursor:pointer}
 .slot.dragging-src{opacity:.35}
 .drag-ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:.95;width:160px}
 body.is-dragging,body.is-dragging *{cursor:grabbing!important}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.grid > .pair-rasen{background:var(--rasen-bg)!important}
+.grid > .pair-kunst{background:var(--kunst-bg)!important}
+.ph.pair-rasen{box-shadow:inset 5px 0 0 var(--rasen-bar)}
+.ph.pair-kunst{box-shadow:inset 5px 0 0 var(--kunst-bar)}
+.grid > .cell.is-today.pair-rasen,.grid > .cell.is-today.pair-kunst{background:var(--today)!important}
+.grid > .cell.closed-cell{background:repeating-linear-gradient(135deg,var(--off-bg) 0 8px,var(--surface) 8px 16px)!important}
+.grid > .cell.over{background:var(--accent-soft)!important}
+&gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 
 /* Dialog */
 .scrim{position:fixed;inset:0;background:rgba(5,10,25,.5);z-index:40;display:grid;place-items:center;padding:16px}
@@ -153,8 +160,8 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important}
 <div id="root"></div>
 <div id="dialogHost"></div>
 <div id="toastHost"></div>
-<script src="config.js?v=5"></script>
-<script src="core.js?v=5"></script>
+<script src="config.js?v=6"></script>
+<script src="core.js?v=6"></script>
 <script>
 const DEMO = location.hash === "#demo";
 let plan = {weeks:{}}, versions = {}, user = null, features = [];
@@ -280,10 +287,10 @@ function render(){
   grid.append(el("div",{class:"corner"}));
   DAYS.forEach((n,d)=> grid.append(el("div",{class:"dh"+(d===today?" is-today":"")}, el("b",{},n), el("small",{},dm(addDays(mon,d))))));
   for (const p of PITCHES){
-    grid.append(el("div",{class:"ph"}, el("b",{},p.name), el("small",{},p.area)));
+    grid.append(el("div",{class:"ph"+pairCls(p)}, el("b",{},p.name), el("small",{},p.area)));
     for (let d=0; d<5; d++){
       const closed = w.closed[`${p.id}-${d}`];
-      const cell = el("div",{class:"cell"+(d===today?" is-today":"")+(closed?" closed-cell":""),"data-p":p.id,"data-d":String(d)});
+      const cell = el("div",{class:"cell"+pairCls(p)+(d===today?" is-today":"")+(closed?" closed-cell":""),"data-p":p.id,"data-d":String(d)});
       if (closed) cell.append(el("div",{class:"closedlabel"},"Gesperrt"));
       for (const s of w.slots.filter(s=>s.p===p.id && s.d===d).sort(byTime)){
         const [bg,fg] = colorOf(s.team);

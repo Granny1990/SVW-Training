@@ -23,7 +23,7 @@
   --bg:#edf2f8; --surface:#ffffff; --surface-2:#f5f7fb; --line:#dde2ec; --line-2:#c9d1e0;
   --fg:#141a2b; --muted:#5b6478; --navy:#275aa2; --navy-2:#1d4885; --navy-ink:#ffffff;
   --accent:#275aa2; --warn:#b4530b; --off:#b3261e; --off-bg:#fde9e7; --chip:#e3e8f3; --now:#e0262f;
-  --today:#e3ecf7;
+  --today:#e3ecf7; --ring:rgba(0,0,0,.08); --rasen-bg:#edf5ea; --rasen-bar:#4a9a52; --kunst-bg:#eaf0f9; --kunst-bar:#275aa2;
   --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
@@ -32,12 +32,12 @@
   --bg:#0c1120; --surface:#141b2d; --surface-2:#1a2238; --line:#252f4a; --line-2:#323e5e;
   --fg:#e8ecf6; --muted:#9aa4bd; --navy:#1f4f93; --navy-2:#183f78; --navy-ink:#ffffff;
   --accent:#8db4ea; --warn:#ffb36b; --off:#ff8a80; --off-bg:#3b1715; --chip:#232d48; --now:#ff5a62;
-  --today:#1b2645; color-scheme:dark}}
+  --today:#1b2645; --ring:rgba(255,255,255,.22); --rasen-bg:#15241d; --rasen-bar:#62b56c; --kunst-bg:#152039; --kunst-bar:#7aa4e6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0c1120; --surface:#141b2d; --surface-2:#1a2238; --line:#252f4a; --line-2:#323e5e;
   --fg:#e8ecf6; --muted:#9aa4bd; --navy:#1f4f93; --navy-2:#183f78; --navy-ink:#ffffff;
   --accent:#8db4ea; --warn:#ffb36b; --off:#ff8a80; --off-bg:#3b1715; --chip:#232d48; --now:#ff5a62;
-  --today:#1b2645; color-scheme:dark}
+  --today:#1b2645; --ring:rgba(255,255,255,.22); --rasen-bg:#15241d; --rasen-bar:#62b56c; --kunst-bg:#152039; --kunst-bar:#7aa4e6; color-scheme:dark}
 
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -100,6 +100,11 @@ button{cursor:pointer}
 .m-agenda .m-dn{font:700 16px/1.1 var(--display);text-transform:uppercase}
 .m-agenda .m-dn small{display:block;font:500 11px var(--body);color:var(--muted)}
 .m-ag-item{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;padding:2px 0}
+.m-pair{border-radius:10px;padding:0 10px 0 12px;margin:6px -4px;box-shadow:inset 4px 0 0 var(--bar)}
+.m-pair.pair-rasen{background:var(--rasen-bg);--bar:var(--rasen-bar)}
+.m-pair.pair-kunst{background:var(--kunst-bg);--bar:var(--kunst-bar)}
+.m-pair .m-pitch:first-child{border-top:0}
+.m-pair + .m-pitch{border-top:0}
 .m-foot{font-size:11px;color:var(--muted);text-align:center;padding:16px 12px 8px;display:flex;flex-direction:column;gap:6px}
 .m-foot a{color:var(--accent)}
 
@@ -132,7 +137,7 @@ button{cursor:pointer}
 .d-ph small{color:var(--muted);font-size:.8em;line-height:1.25}
 .d-cell{padding:.45em;display:flex;flex-direction:column;gap:.3em}
 .d-cell.is-today{background:var(--today)!important}
-.d-slot{display:flex;align-items:center;gap:.5em;border-radius:.35em;padding:.38em .55em;min-width:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.d-slot{display:flex;align-items:center;gap:.5em;border-radius:.35em;padding:.38em .55em;min-width:0;box-shadow:inset 0 0 0 1px var(--ring)}
 .d-slot b{font:700 1.2em/1 var(--display);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .d-slot span{margin-left:auto;font:600 1.1em/1 var(--display);font-variant-numeric:tabular-nums;white-space:nowrap}
 .d-slot i{font-style:normal;font-size:.85em;opacity:.85}
@@ -144,6 +149,11 @@ button{cursor:pointer}
 .d-fill{flex:1;min-height:2.4em;border-radius:.35em;display:grid;place-items:center;font:600 1.05em/1 var(--display);letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:.4em}
 .d-fill.closed{background:repeating-linear-gradient(135deg,var(--off-bg) 0 8px,transparent 8px 16px);color:var(--off)}
 .d-fill.req{background:repeating-linear-gradient(135deg,var(--chip) 0 8px,transparent 8px 16px);color:var(--muted)}
+.d-grid > .pair-rasen{background:var(--rasen-bg)!important}
+.d-grid > .pair-kunst{background:var(--kunst-bg)!important}
+.d-ph.pair-rasen{box-shadow:inset .35em 0 0 var(--rasen-bar)}
+.d-ph.pair-kunst{box-shadow:inset .35em 0 0 var(--kunst-bar)}
+.d-cell.is-today.pair-rasen,.d-cell.is-today.pair-kunst{background:var(--today)!important}
 .d-foot{display:flex;gap:1.5em;align-items:center;padding:.5em 1.4em;font-size:.85em;color:var(--muted);flex-wrap:wrap}
 .d-foot .sw{display:inline-block;width:1.2em;height:.8em;border-radius:.2em;vertical-align:-.05em;margin-right:.4em}
 .d-foot a{color:var(--accent)}
@@ -157,8 +167,8 @@ button{cursor:pointer}
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="config.js?v=5"></script>
-<script src="core.js?v=5"></script>
+<script src="config.js?v=6"></script>
+<script src="core.js?v=6"></script>
 <script>
 let plan = {weeks:{}}; let loadedAt = null; let updatedAt = null;
 let state = {week:null, day:0, team:""};
@@ -284,7 +294,8 @@ function mobileDay(w, mon, bad){
       }
       sec.append(ul);
     } else if (!closed && !p.request) sec.append(el("div",{class:"m-none"},"frei"));
-    out.push(sec);
+    if (!p.pair) out.push(sec);
+    else { const last = out[out.length-1]; if (last.classList.contains("m-pair") && last.dataset.pair === p.pair) last.append(sec); else out.push(el("div",{class:"m-pair"+pairCls(p),"data-pair":p.pair}, sec)); }
   }
   return out;
 }
@@ -338,9 +349,9 @@ function desktopView(){
   grid.append(el("div",{class:"d-corner"}));
   DAYS.forEach((n,d)=> grid.append(el("div",{class:"d-dh"+(d===today?" is-today":"")}, el("b",{},n), el("small",{},dm(addDays(mon,d))))));
   for (const p of PITCHES){
-    grid.append(el("div",{class:"d-ph"}, el("b",{},p.name), el("small",{},p.area)));
+    grid.append(el("div",{class:"d-ph"+pairCls(p)}, el("b",{},p.name), el("small",{},p.area)));
     for (let d=0; d<5; d++){
-      const cell = el("div",{class:"d-cell"+(d===today?" is-today":"")});
+      const cell = el("div",{class:"d-cell"+pairCls(p)+(d===today?" is-today":"")});
       const ps = w.slots.filter(s=>s.p===p.id && s.d===d).sort(byTime);
       const closed = w.closed[`${p.id}-${d}`];
       if (closed) cell.append(el("div",{class:"d-fill closed"},closed));
