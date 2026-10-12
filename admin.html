@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#13348f">
+<title>Trainingsplan Admin · SV Westfalia Rhynern</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: Planungstafel. Links die Mannschafts-Leiste (Magnetstreifen), rechts die
+   Wochenmatrix Plätze x Tage. Bunte Balken werden auf Zellen gezogen. */
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --surface-2:#f5f7fb; --line:#dde2ec; --line-2:#c9d1e0;
+  --fg:#141a2b; --muted:#5b6478; --navy:#13348f; --navy-ink:#ffffff;
+  --accent:#1f4fd6; --accent-soft:#e3eaff; --warn:#b4530b; --warn-bg:#fff1e3; --off:#b3261e; --off-bg:#fde9e7;
+  --chip:#e3e8f3; --ok:#1d7a3a; --today:#e8eefc;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1120; --surface:#141b2d; --surface-2:#1a2238; --line:#252f4a; --line-2:#323e5e;
+  --fg:#e8ecf6; --muted:#9aa4bd; --navy:#183690; --navy-ink:#ffffff;
+  --accent:#7ea2ff; --accent-soft:#1d2a52; --warn:#ffb36b; --warn-bg:#3a2612; --off:#ff8a80; --off-bg:#3b1715;
+  --chip:#232d48; --ok:#5fd38a; --today:#1b2645; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1120; --surface:#141b2d; --surface-2:#1a2238; --line:#252f4a; --line-2:#323e5e;
+  --fg:#e8ecf6; --muted:#9aa4bd; --navy:#183690; --navy-ink:#ffffff;
+  --accent:#7ea2ff; --accent-soft:#1d2a52; --warn:#ffb36b; --warn-bg:#3a2612; --off:#ff8a80; --off-bg:#3b1715;
+  --chip:#232d48; --ok:#5fd38a; --today:#1b2645; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 var(--body)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.tag{display:inline-block;font:700 14px/1 var(--display);letter-spacing:.03em;padding:4px 7px;border-radius:5px;white-space:nowrap}
+.btn{height:34px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);padding:0 12px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--off);border-color:var(--off);background:transparent}
+.btn.ghost{background:rgba(255,255,255,.14);border-color:transparent;color:inherit}
+.btn:disabled{opacity:.45;cursor:default}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;max-width:calc(100% - 32px);text-align:center}
+
+/* Login */
+.login{min-height:100%;display:grid;place-items:center;padding:24px 16px}
+.login form{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px}
+.login h1{margin:0;font:700 26px/1 var(--display);text-transform:uppercase;color:var(--navy)}
+.login p{margin:0;color:var(--muted);font-size:13px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select{height:38px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface-2);padding:0 10px;width:100%}
+.err{color:var(--off);font-size:13px;min-height:1em}
+.notice{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:12px 14px;font-size:13px}
+
+/* App */
+.app{height:100%;display:grid;grid-template-rows:auto 1fr;min-height:0}
+.top{background:var(--navy);color:var(--navy-ink);display:flex;align-items:center;gap:14px;padding:8px 16px;flex-wrap:wrap}
+.brand b{display:block;font:700 22px/1 var(--display);text-transform:uppercase}
+.brand small{display:block;font:600 11px/1 var(--display);letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+.week{display:flex;align-items:center;gap:6px}
+.week .range{font:600 19px/1 var(--display);font-variant-numeric:tabular-nums;min-width:170px;text-align:center}
+.week .nav{width:32px;height:32px;border-radius:8px;border:0;background:rgba(255,255,255,.14);color:inherit;font-size:17px}
+.top .spacer{flex:1}
+.savestate{font-size:12px;opacity:.85;white-space:nowrap}
+.savestate.dirty{color:#ffd29a;opacity:1;font-weight:600}
+.who{font-size:12px;opacity:.8}
+.body{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:0}
+.side{background:var(--surface);border-right:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:10px;overflow:auto;min-height:0}
+.side h2{margin:0;font:700 15px/1 var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.side .hint{font-size:12px;color:var(--muted);line-height:1.35}
+.palette{display:flex;flex-direction:column;gap:5px}
+.pchip{display:flex;align-items:center;justify-content:space-between;gap:6px;border-radius:6px;padding:7px 9px;font:700 15px/1 var(--display);letter-spacing:.03em;cursor:grab;touch-action:none;user-select:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.pchip small{font:500 11px var(--body);opacity:.8}
+.addteam{display:flex;gap:6px}
+.addteam input{flex:1;min-width:0;height:32px;border-radius:7px;border:1px solid var(--line-2);background:var(--surface-2);padding:0 8px}
+.addteam button{height:32px;width:32px;border-radius:7px;border:1px solid var(--line-2);background:var(--surface);font-size:18px;line-height:1}
+.board{overflow:auto;min-height:0}
+.grid{display:grid;grid-template-columns:150px repeat(5,minmax(150px,1fr));gap:1px;background:var(--line);min-width:900px;min-height:100%}
+.grid > div{background:var(--surface);min-width:0}
+.dh,.corner,.ph{background:var(--surface-2)!important}
+.dh{padding:8px 10px;display:flex;align-items:baseline;gap:6px;position:sticky;top:0;z-index:2}
+.dh b{font:700 18px/1 var(--display);text-transform:uppercase}
+.dh small{color:var(--muted);font-variant-numeric:tabular-nums}
+.dh.is-today{background:var(--navy)!important;color:var(--navy-ink)}
+.dh.is-today small{color:inherit;opacity:.8}
+.corner{position:sticky;top:0;z-index:2}
+.ph{padding:10px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.ph b{font:700 16px/1.05 var(--display);text-transform:uppercase}
+.ph small{color:var(--muted);font-size:11px;line-height:1.25}
+.cell{padding:6px;display:flex;flex-direction:column;gap:4px;position:relative;min-height:84px;transition:background .1s}
+.cell.is-today{background:var(--today)!important}
+.cell.over{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2px var(--accent)}
+.cell.closed-cell{background:repeating-linear-gradient(135deg,var(--off-bg) 0 8px,var(--surface) 8px 16px)!important}
+.cell .tools{display:flex;gap:4px;justify-content:flex-end;margin-top:auto;opacity:.35;transition:opacity .15s}
+.cell:hover .tools,.cell:focus-within .tools{opacity:1}
+@media (hover:none){.cell .tools{opacity:1}}
+.tool{height:24px;border-radius:6px;border:1px solid var(--line-2);background:var(--surface);font-size:12px;padding:0 7px;color:var(--muted)}
+.tool:hover{color:var(--fg)}
+.closedlabel{font:600 13px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--off);text-align:center;padding:6px 0}
+.slot{display:flex;align-items:center;gap:6px;border-radius:6px;padding:6px 8px;min-width:0;cursor:grab;touch-action:none;user-select:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);flex-wrap:wrap}
+.slot b{font:700 15px/1 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot span{margin-left:auto;font:600 14px/1 var(--display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.slot i{font-style:normal;font-size:11px;opacity:.85}
+.slot .note{flex-basis:100%;font:500 11px/1.2 var(--body);opacity:.9}
+.slot.off{background:repeating-linear-gradient(135deg,var(--off-bg) 0 6px,var(--surface) 6px 12px)!important;color:var(--off)!important}
+.slot.off b,.slot.off span{text-decoration:line-through}
+.slot.warn{box-shadow:inset 0 0 0 2px var(--warn)}
+.slot.dragging-src{opacity:.35}
+.ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:.95;width:160px}
+body.is-dragging,body.is-dragging *{cursor:grabbing!important}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+
+/* Dialog */
+.scrim{position:fixed;inset:0;background:rgba(5,10,25,.5);z-index:40;display:grid;place-items:center;padding:16px}
+.dialog{background:var(--surface);width:100%;max-width:460px;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;max-height:100%;overflow:auto}
+.dialog h3{margin:0;font:700 22px/1 var(--display);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.full{grid-column:1/-1}
+.seg{display:flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden}
+.seg button{flex:1;height:36px;border:0;background:var(--surface-2);font-weight:600;font-size:13px}
+.seg button+button{border-left:1px solid var(--line-2)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.check{display:flex;align-items:center;gap:8px;font-size:13px}
+.check input{width:18px;height:18px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions .right{margin-left:auto;display:flex;gap:8px}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.quick button{height:28px;border-radius:6px;border:1px solid var(--line-2);background:var(--surface-2);font-size:12px;padding:0 8px;font-variant-numeric:tabular-nums}
+
+@media (max-width: 760px){
+  .body{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .side{border-right:0;border-bottom:1px solid var(--line);flex-direction:column;max-height:none}
+  .palette{flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  .pchip{flex:none}
+  .side .hint.long{display:none}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="dialogHost"></div>
+<div id="toastHost"></div>
+<script src="config.js"></script>
+<script src="core.js"></script>
+<script>
+const DEMO = location.hash === "#demo";
+let plan = {weeks:{}}, versions = {}, user = null;
+let state = {week:null, dirty:new Set(), saving:false};
+let customTeams = [];
+try { customTeams = JSON.parse(store.get("svw-admin-teams") || "[]"); } catch { customTeams = []; }
+const BASE_TEAMS = ["A1","A2","B1","B2","C1","C2","D1","D2","D3","E1","E2","E3","F1","F2","Minis","1.M","2.M","Dritte","Alte Herren","Walking Football"];
+let uidN = 0; const uid = () => "n" + (++uidN) + Math.random().toString(36).slice(2,6);
+
+const W = () => plan.weeks[state.week] ||= {closed:{}, slots:[]};
+const weekKeys = () => Object.keys(plan.weeks).sort();
+const allTeams = () => [...new Set([...BASE_TEAMS, ...customTeams, ...Object.values(plan.weeks).flatMap(w=>w.slots.map(s=>s.team))])].sort(teamSort);
+const todayIndex = () => { const now = new Date(); const d=(now.getDay()+6)%7; return isoDate(mondayOf(now))===state.week && d<5 ? d : -1; };
+const isDirty = () => state.dirty.size > 0;
+function markDirty(){ state.dirty.add(state.week); }
+
+/* ---------- API ---------- */
+async function api(body){
+  if (DEMO){ await new Promise(r=>setTimeout(r,300)); return body.action==="save" ? {ok:true, version:new Date().toISOString()} : {ok:true, name:body.name||"Demo"}; }
+  const r = await fetch(CFG.SCRIPT_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(body)});
+  if (!r.ok) throw new Error("http");
+  return r.json();
+}
+const ERR = {
+  auth: "Name oder Passwort stimmt nicht.",
+  conflict: "Jemand anderes hat diese Woche inzwischen gespeichert. Lade neu und übernimm deine Änderung dann noch einmal.",
+  busy: "Gerade speichert jemand anderes. Bitte in ein paar Sekunden erneut versuchen.",
+  row: "Ein Eintrag ist unvollständig (Mannschaft, Uhrzeit oder Dauer prüfen).",
+};
+
+/* ---------- login ---------- */
+function showLogin(msg){
+  const root = $("#root");
+  if (!CFG.SCRIPT_URL && !DEMO){
+    root.replaceChildren(el("div",{class:"login"}, el("form",{onsubmit:e=>e.preventDefault()},
+      el("h1",{},"Trainingsplan Admin"),
+      el("div",{class:"notice"},"Die Admin-Seite ist noch nicht verbunden. Bitte zuerst das Google-Skript einrichten und den Web-App-Link in config.js bei SCRIPT_URL eintragen (siehe ANLEITUNG.md)."),
+      el("button",{class:"btn primary",type:"button",style:"justify-content:center;height:40px",onclick:()=>{location.hash="demo";location.reload();}},"Demo ausprobieren (ohne Speichern)"))));
+    return;
+  }
+  const err = el("div",{class:"err",role:"alert"}, msg || "");
+  const form = el("form",{onsubmit:async e=>{
+      e.preventDefault(); err.textContent = "";
+      const name = $("#l-name").value.trim(), password = $("#l-pw").value;
+      if (!name || !password){ err.textContent = "Bitte Name und Passwort eingeben."; return; }
+      const b = $("#l-go"); b.disabled = true; b.textContent = "Prüfe …";
+      try {
+        const res = await api({action:"check", name, password});
+        if (!res.ok){ err.textContent = ERR[res.error] || "Anmeldung hat nicht geklappt."; return; }
+        user = {name: res.name, password}; sstore.set("svw-admin", JSON.stringify(user)); store.set("svw-admin-name", res.name);
+        await startApp();
+      } catch { err.textContent = "Keine Verbindung zum Google-Skript. Internet prüfen oder später erneut versuchen."; }
+      finally { b.disabled = false; b.textContent = "Anmelden"; }
+    }},
+    el("h1",{},"Trainingsplan Admin"),
+    el("p",{}, DEMO ? "Demo: beliebiger Name und beliebiges Passwort. Es wird nichts gespeichert." : "SV Westfalia Rhynern · Platzbelegung bearbeiten"),
+    el("div",{class:"field"}, el("label",{for:"l-name"},"Name"), el("input",{id:"l-name",autocomplete:"username",value:store.get("svw-admin-name")||""})),
+    el("div",{class:"field"}, el("label",{for:"l-pw"},"Passwort"), el("input",{id:"l-pw",type:"password",autocomplete:"current-password"})),
+    err,
+    el("button",{class:"btn primary",id:"l-go",type:"submit",style:"justify-content:center;height:40px"},"Anmelden"),
+    el("p",{}, el("a",{href:"./",style:"color:var(--accent)"},"Zum öffentlichen Trainingsplan")));
+  root.replaceChildren(el("div",{class:"login"}, form));
+  setTimeout(()=> ($("#l-name").value ? $("#l-pw") : $("#l-name")).focus(), 30);
+}
+
+async function reload(keepWeek){
+  const res = await loadPlanData();
+  plan = res.plan; versions = res.versions || {};
+  state.dirty.clear();
+  if (!keepWeek || !state.week){
+    const cur = currentWeekKey();
+    state.week = cur;
+  }
+}
+async function startApp(){
+  $("#root").replaceChildren(el("div",{class:"login"}, el("p",{},"Plan wird geladen …")));
+  try { await reload(false); render(); }
+  catch { showLogin("Der Plan konnte nicht geladen werden. Bitte später erneut versuchen."); }
+}
+function logout(){
+  const go = () => { sstore.del("svw-admin"); user = null; state.dirty.clear(); showLogin(); };
+  if (state.dirty.size) openConfirm("Abmelden ohne zu speichern?", "Ungespeicherte Änderungen gehen verloren.", "Abmelden", go); else go();
+}
+
+/* ---------- render ---------- */
+function render(){
+  const w = W(); const mon = parseISO(state.week); const today = todayIndex(); const bad = conflicts(w.slots);
+  const dirty = isDirty();
+  const top = el("header",{class:"top"},
+    el("div",{class:"brand"}, el("small",{},DEMO ? "Demo – nichts wird gespeichert" : "SV Westfalia Rhynern"), el("b",{},"Trainingsplan · Admin")),
+    el("div",{class:"week"},
+      el("button",{class:"nav","aria-label":"Vorige Woche",onclick:()=>goWeek(-7)},"‹"),
+      el("div",{class:"range"}, `${dm(mon)} – ${dm(addDays(mon,4))}${addDays(mon,4).getFullYear()}`),
+      el("button",{class:"nav","aria-label":"Nächste Woche",onclick:()=>goWeek(7)},"›"),
+      state.week!==currentWeekKey() ? el("button",{class:"btn ghost",onclick:()=>{state.week=currentWeekKey();render();}},"Diese Woche") : null),
+    el("button",{class:"btn ghost",onclick:copyPrevWeek,title:"Alle Einträge der Vorwoche in diese Woche übernehmen"},"Vorwoche übernehmen"),
+    el("div",{class:"spacer"}),
+    el("span",{class:"savestate"+(dirty?" dirty":"")}, dirty ? `Ungespeichert: ${[...state.dirty].sort().map(k=>"Woche ab "+dm(parseISO(k))).join(", ")}` : "Alles gespeichert"),
+    dirty ? el("button",{class:"btn ghost",onclick:discard},"Verwerfen") : null,
+    el("button",{class:"btn primary",id:"saveBtn",disabled:!dirty||state.saving,onclick:save}, state.saving ? "Speichert …" : "Speichern"),
+    el("span",{class:"who"}, user.name),
+    el("button",{class:"btn ghost",onclick:logout},"Abmelden"));
+
+  const palette = el("div",{class:"palette"}, ...allTeams().map(t=>{
+    const [bg,fg] = colorOf(t);
+    const n = w.slots.filter(s=>s.team===t && !s.off).length;
+    const chip = el("div",{class:"pchip",style:`background:${bg};color:${fg}`,tabindex:"0",role:"button",
+      "aria-label":`${t} – auf einen Platz ziehen`}, t, n ? el("small",{},`${n}×`) : null);
+    chip.addEventListener("pointerdown", e => startDrag(e, {kind:"team", team:t}, chip));
+    return chip;
+  }));
+  const side = el("aside",{class:"side"},
+    el("h2",{},"Mannschaften"),
+    el("p",{class:"hint"},"Balken auf Platz und Tag ziehen."),
+    palette,
+    el("form",{class:"addteam",onsubmit:e=>{e.preventDefault(); const v=$("#newTeam").value.trim().slice(0,40); if(!v) return; if(!allTeams().includes(v)){ customTeams.push(v); store.set("svw-admin-teams", JSON.stringify(customTeams)); } $("#newTeam").value=""; render();}},
+      el("input",{id:"newTeam",placeholder:"Neue Mannschaft","aria-label":"Neue Mannschaft"}), el("button",{type:"submit","aria-label":"Mannschaft hinzufügen"},"+")),
+    el("p",{class:"hint long"},"Eintrag anklicken: Zeit, Dauer, Absage ändern. Eintrag ziehen: verschieben. Mit gedrückter Strg-/Alt-Taste ziehen: kopieren."),
+    el("div",{class:"legend"}, el("span",{},"Orange Rand = Überschneidung")));
+
+  const grid = el("div",{class:"grid"});
+  grid.append(el("div",{class:"corner"}));
+  DAYS.forEach((n,d)=> grid.append(el("div",{class:"dh"+(d===today?" is-today":"")}, el("b",{},n), el("small",{},dm(addDays(mon,d))))));
+  for (const p of PITCHES){
+    grid.append(el("div",{class:"ph"}, el("b",{},p.name), el("small",{},p.area)));
+    for (let d=0; d<5; d++){
+      const closed = w.closed[`${p.id}-${d}`];
+      const cell = el("div",{class:"cell"+(d===today?" is-today":"")+(closed?" closed-cell":""),"data-p":p.id,"data-d":String(d)});
+      if (closed) cell.append(el("div",{class:"closedlabel"},"Gesperrt"));
+      for (const s of w.slots.filter(s=>s.p===p.id && s.d===d).sort(byTime)){
+        const [bg,fg] = colorOf(s.team);
+        const slot = el("div",{class:"slot"+(s.off?" off":"")+(bad.has(s.id)?" warn":""),style:`background:${bg};color:${fg}`,
+          tabindex:"0",role:"button","data-id":s.id,
+          "aria-label":`${s.team}, ${startLabel(s)} Uhr. Enter zum Bearbeiten.`,
+          title:`${s.team} · ${startLabel(s)}${s.ab?"":"–"+fmt(toMin(s.t)+s.dur)} Uhr${s.share?" · "+SHARE_LABEL[s.share]:""}${bad.has(s.id)?" · Überschneidung":""}`},
+          el("b",{},s.team), s.share ? el("i",{},SHARE_SHORT[s.share]) : null, el("span",{},startLabel(s)),
+          s.note ? el("div",{class:"note"},s.note) : null);
+        slot.addEventListener("pointerdown", e => startDrag(e, {kind:"slot", id:s.id}, slot));
+        slot.addEventListener("keydown", e => { if (e.key==="Enter"||e.key===" "){ e.preventDefault(); openDialog({slot:s}); } });
+        cell.append(slot);
+      }
+      cell.append(el("div",{class:"tools"},
+        el("button",{class:"tool",onclick:()=>openDialog({p:p.id, d}),"aria-label":`Training hinzufügen: ${p.name}, ${DAYS[d]}`},"+ Training"),
+        el("button",{class:"tool",onclick:()=>toggleClosed(p.id,d)}, closed ? "Freigeben" : "Sperren")));
+      grid.append(cell);
+    }
+  }
+  const scroll = $(".board") ? [$(".board").scrollLeft, $(".board").scrollTop] : [0,0];
+  $("#root").replaceChildren(el("div",{class:"app"}, top, el("div",{class:"body"}, side, el("main",{class:"board"}, grid))));
+  $(".board").scrollLeft = scroll[0]; $(".board").scrollTop = scroll[1];
+}
+
+function goWeek(delta){
+  state.week = isoDate(addDays(parseISO(state.week), delta)); render();
+}
+
+/* ---------- edits ---------- */
+function toggleClosed(pid, d){
+  const w = W(); const k = `${pid}-${d}`;
+  if (w.closed[k]) delete w.closed[k]; else w.closed[k] = "Gesperrt";
+  markDirty(); render();
+}
+function copyPrevWeek(){
+  const prevKey = isoDate(addDays(parseISO(state.week), -7)); const prev = plan.weeks[prevKey];
+  if (!prev || (!prev.slots.length && !Object.keys(prev.closed).length)){ toast("In der Vorwoche ist nichts eingetragen."); return; }
+  const w = W();
+  if (w.slots.length || Object.keys(w.closed).length){
+    openConfirm("Vorwoche übernehmen?", "Die Einträge dieser Woche werden durch die der Vorwoche ersetzt. Gespeichert wird erst mit „Speichern“.", "Ersetzen", doCopy);
+  } else doCopy();
+  function doCopy(){
+    plan.weeks[state.week] = {closed:{...prev.closed}, slots: prev.slots.map(s => ({...s, id:uid(), off:false, note:undefined}))};
+    markDirty(); render(); toast("Vorwoche übernommen. Absagen und Hinweise wurden nicht mitkopiert.");
+  }
+}
+function discard(){
+  openConfirm("Änderungen verwerfen?", "Alle ungespeicherten Änderungen gehen verloren und der gespeicherte Stand wird neu geladen.", "Verwerfen", async () => {
+    try { await reload(true); render(); toast("Gespeicherten Stand geladen."); } catch { toast("Laden hat nicht geklappt."); }
+  });
+}
+
+async function save(){
+  if (state.saving || !state.dirty.size) return;
+  state.saving = true; render();
+  let okCount = 0, failed = false;
+  for (const wk of [...state.dirty].sort()){
+    const res = await saveWeek(wk);
+    if (res === true){ okCount++; continue; }
+    failed = true; toast(res, 5000); break;
+  }
+  state.saving = false; render();
+  if (!failed && okCount) toast(DEMO ? "Demo: Speichern simuliert, es wurde nichts verändert." : okCount > 1 ? `${okCount} Wochen gespeichert. Der öffentliche Plan ist sofort aktuell.` : "Gespeichert. Der öffentliche Plan ist sofort aktuell.");
+}
+async function saveWeek(wk){
+  const w = plan.weeks[wk] || {closed:{}, slots:[]};
+  const rows = [];
+  for (const [k] of Object.entries(w.closed)){
+    const [pid, d] = k.split("-");
+    rows.push({tag:DAYS[+d], platz:pitch(pid).name, status:"Platz gesperrt"});
+  }
+  for (const s of w.slots){
+    rows.push({tag:DAYS[s.d], platz:pitch(s.p).name, team:s.team, beginn:s.t, dauer:s.dur, offen:!!s.ab,
+      anteil: s.share ? SHARE_WORD[s.share] : "ganz", status: s.off ? "abgesagt" : "findet statt", hinweis: s.note || ""});
+  }
+  try {
+    const res = await api({action:"save", name:user.name, password:user.password, week:wk, base: versions[wk] || "", rows});
+    if (res.ok){ versions[wk] = res.version; state.dirty.delete(wk); return true; }
+    if (res.error === "auth") sstore.del("svw-admin");
+    return `Woche ab ${dm(parseISO(wk))}: ` + (ERR[res.error] || "Speichern hat nicht geklappt.");
+  } catch { return "Keine Verbindung. Deine Änderungen sind noch da, bitte erneut speichern."; }
+}
+
+/* ---------- dialog ---------- */
+function suggestStart(pid, d){
+  const ss = W().slots.filter(s=>s.p===pid && s.d===d && !s.ab).sort(byTime);
+  if (!ss.length) return "17:00";
+  const end = Math.max(...ss.map(s=>toMin(s.t)+s.dur));
+  return end > 21*60 ? "17:00" : fmt(Math.ceil(end/15)*15);
+}
+function openDialog({slot, team, p, d}){
+  const isNew = !slot;
+  const draft = isNew
+    ? {team: team || "", p, d, t: suggestStart(p,d), dur:75, ab:false, share:"", off:false, note:""}
+    : {...slot, share: slot.share || "", note: slot.note || ""};
+  const close = () => $("#dialogHost").replaceChildren();
+  const seg = (key, opts) => { const wrap = el("div",{class:"seg"});
+    const paint = () => [...wrap.children].forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.v===String(draft[key]))));
+    opts.forEach(([v,l]) => wrap.append(el("button",{type:"button","data-v":String(v),onclick:()=>{draft[key]=v;paint();}},l))); paint(); return wrap; };
+  const err = el("div",{class:"err",role:"alert"});
+  const quick = el("div",{class:"quick"}, ...["16:00","16:30","16:45","17:00","17:30","18:00","18:30","19:00","19:30","20:00"].map(t=>
+    el("button",{type:"button",onclick:()=>{$("#f-time").value=t;}},t)));
+  const [bg,fg] = colorOf(draft.team);
+  let armed = false;
+  const form = el("form",{class:"dialog",onsubmit:e=>{e.preventDefault(); submit();}},
+    el("h3",{}, isNew ? "Training eintragen" : "Training bearbeiten", draft.team ? el("span",{class:"tag",style:`background:${bg};color:${fg}`},draft.team) : null),
+    el("div",{class:"fgrid"},
+      el("div",{class:"field full"}, el("label",{for:"f-team"},"Mannschaft"), el("input",{id:"f-team",list:"teamlist",value:draft.team,autocomplete:"off"}),
+        el("datalist",{id:"teamlist"}, ...allTeams().map(t=>el("option",{value:t})))),
+      el("div",{class:"field"}, el("label",{for:"f-day"},"Tag"), el("select",{id:"f-day"}, ...DAYS.map((n,i)=>el("option",{value:i,selected:i===draft.d},n)))),
+      el("div",{class:"field"}, el("label",{for:"f-pitch"},"Platz"), el("select",{id:"f-pitch"}, ...PITCHES.map(x=>el("option",{value:x.id,selected:x.id===draft.p},x.name)))),
+      el("div",{class:"field"}, el("label",{for:"f-time"},"Beginn"), el("input",{id:"f-time",type:"time",step:"300",value:draft.t})),
+      el("div",{class:"field"}, el("label",{for:"f-dur"},"Dauer (Min.)"), el("input",{id:"f-dur",type:"number",min:"15",max:"300",step:"15",value:draft.dur})),
+      el("div",{class:"full"}, quick),
+      el("label",{class:"check full"}, el("input",{id:"f-ab",type:"checkbox",checked:!!draft.ab}), "Offenes Ende (z. B. „1.M ab 18:45“)"),
+      el("div",{class:"field full"}, el("label",{},"Platzanteil"), seg("share",[["","Ganz"],["1/2","½"],["1/4","¼"]])),
+      el("div",{class:"field full"}, el("label",{},"Status"), seg("off",[[false,"Findet statt"],[true,"Abgesagt"]])),
+      el("div",{class:"field full"}, el("label",{for:"f-note"},"Hinweis (optional)"), el("input",{id:"f-note",value:draft.note,maxlength:"120",placeholder:"z. B. Treffpunkt Kabine 3"}))),
+    err,
+    el("div",{class:"actions"},
+      isNew ? null : el("button",{type:"button",class:"btn danger",id:"delBtn",onclick:()=>{
+        if (!armed){ armed = true; $("#delBtn").textContent = "Wirklich löschen?"; return; }
+        const w = W(); w.slots = w.slots.filter(x=>x.id!==slot.id); markDirty(); close(); render(); toast(`${slot.team} gelöscht`);
+      }},"Löschen"),
+      el("div",{class:"right"}, el("button",{type:"button",class:"btn",onclick:close},"Abbrechen"), el("button",{type:"submit",class:"btn primary"}, isNew ? "Eintragen" : "Übernehmen"))));
+  $("#dialogHost").replaceChildren(el("div",{class:"scrim",onclick:e=>{ if(e.target===e.currentTarget) close(); },onkeydown:e=>{ if(e.key==="Escape") close(); }}, form));
+  setTimeout(()=> (draft.team ? $("#f-time") : $("#f-team")).focus(), 30);
+
+  function submit(){
+    const team = $("#f-team").value.trim().slice(0,40); const t = $("#f-time").value; const dur = parseInt($("#f-dur").value,10);
+    if (!team){ err.textContent = "Bitte eine Mannschaft eintragen."; return; }
+    if (!/^\d{2}:\d{2}$/.test(t)){ err.textContent = "Bitte eine Uhrzeit wählen."; return; }
+    if (!(dur>=15 && dur<=300)){ err.textContent = "Dauer zwischen 15 und 300 Minuten."; return; }
+    const rec = {id: isNew ? uid() : slot.id, d:+$("#f-day").value, p:$("#f-pitch").value, team, t, dur,
+      ab: $("#f-ab").checked, share: draft.share || undefined, off: draft.off === true || draft.off === "true", note: $("#f-note").value.trim() || undefined};
+    const w = W();
+    if (isNew) w.slots.push(rec); else w.slots[w.slots.findIndex(x=>x.id===slot.id)] = rec;
+    markDirty(); close(); render();
+  }
+}
+function openConfirm(title, text, okLabel, onOk){
+  const close = () => $("#dialogHost").replaceChildren();
+  $("#dialogHost").replaceChildren(el("div",{class:"scrim",onclick:e=>{ if(e.target===e.currentTarget) close(); }},
+    el("div",{class:"dialog",role:"alertdialog"}, el("h3",{},title), el("p",{style:"margin:0"},text),
+      el("div",{class:"actions"}, el("div",{class:"right"},
+        el("button",{class:"btn",onclick:close},"Abbrechen"),
+        el("button",{class:"btn primary",id:"okBtn",onclick:()=>{close(); onOk();}},okLabel))))));
+  setTimeout(()=>$("#okBtn").focus(),30);
+}
+
+/* ---------- drag & drop (Maus und Touch) ---------- */
+let drag = null;
+function startDrag(e, payload, src){
+  if (e.button !== undefined && e.button !== 0) return;
+  drag = {payload, src, x0:e.clientX, y0:e.clientY, started:false, ghost:null, over:null};
+  try { src.setPointerCapture(e.pointerId); } catch {}
+}
+function cellAt(x, y){ const n = document.elementFromPoint(x, y); return n ? n.closest(".cell") : null; }
+document.addEventListener("pointermove", e => {
+  if (!drag) return;
+  if (!drag.started){
+    if (Math.hypot(e.clientX-drag.x0, e.clientY-drag.y0) < 6) return;
+    drag.started = true;
+    const g = drag.src.cloneNode(true); g.classList.add("ghost"); g.classList.remove("dragging-src");
+    document.body.append(g); drag.ghost = g;
+    if (drag.payload.kind === "slot") drag.src.classList.add("dragging-src");
+    document.body.classList.add("is-dragging");
+  }
+  drag.ghost.style.transform = `translate(${e.clientX-20}px, ${e.clientY-16}px)`;
+  const c = cellAt(e.clientX, e.clientY);
+  if (c !== drag.over){ drag.over?.classList.remove("over"); c?.classList.add("over"); drag.over = c; }
+  const b = $(".board"); if (b){ const r = b.getBoundingClientRect();
+    if (e.clientY > r.bottom-40) b.scrollTop += 12; else if (e.clientY < r.top+40) b.scrollTop -= 12;
+    if (e.clientX > r.right-40) b.scrollLeft += 12; else if (e.clientX < r.left+40) b.scrollLeft -= 12; }
+});
+function endDrag(e, cancelled){
+  if (!drag) return;
+  const d = drag; drag = null;
+  d.ghost?.remove(); d.over?.classList.remove("over"); d.src.classList.remove("dragging-src"); document.body.classList.remove("is-dragging");
+  if (cancelled) return;
+  if (!d.started){
+    if (d.payload.kind === "slot"){ const s = W().slots.find(x=>x.id===d.payload.id); if (s) openDialog({slot:s}); }
+    else toast("Balken auf einen Platz ziehen oder in einer Zelle „+ Training“ wählen.");
+    return;
+  }
+  const c = cellAt(e.clientX, e.clientY); if (!c) return;
+  const p = c.dataset.p, day = +c.dataset.d;
+  if (d.payload.kind === "team"){ openDialog({team:d.payload.team, p, d:day}); return; }
+  const w = W(); const s = w.slots.find(x=>x.id===d.payload.id); if (!s) return;
+  if (s.p === p && s.d === day) return;
+  const copy = e.ctrlKey || e.altKey || e.metaKey;
+  if (copy){ w.slots.push({...s, id:uid()}); toast(`${s.team} kopiert: ${pitch(p).name}, ${DAYS[day]}`); }
+  else toast(`${s.team} verschoben: ${pitch(p).name}, ${DAYS[day]}`);
+  const target = copy ? w.slots[w.slots.length-1] : s;
+  target.p = p; target.d = day;
+  markDirty(); render();
+}
+document.addEventListener("pointerup", e => endDrag(e, false));
+document.addEventListener("pointercancel", e => endDrag(e, true));
+document.addEventListener("keydown", e => { if (e.key === "Escape" && drag) endDrag(e, true); });
+window.addEventListener("beforeunload", e => { if (state.dirty.size){ e.preventDefault(); e.returnValue = ""; } });
+
+/* ---------- start ---------- */
+(function init(){
+  try { user = JSON.parse(sstore.get("svw-admin") || "null"); } catch { user = null; }
+  if (user && (CFG.SCRIPT_URL || DEMO)) startApp(); else showLogin();
+})();
+</script>
+</body>
+</html>

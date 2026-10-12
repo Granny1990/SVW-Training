@@ -4,6 +4,9 @@ Wöchentlicher Trainingsplan mit Platzbelegung des SV Westfalia Rhynern.
 
 **Ansehen:** https://granny1990.github.io/svw-training/
 
-- Die Daten kommen aus dem veröffentlichten Google Sheet (Blatt „Belegung“, CSV).
-- Bearbeitet wird nur im Google Sheet. Die Seite lädt alle 5 Minuten neu.
-- Der Link zum Sheet steht ganz oben in `index.html` bei `CSV_URL`.
+**Bearbeiten (Admin):** https://granny1990.github.io/SVW-Training/admin.html
+
+- Mannschaften per Drag & Drop auf Platz und Tag ziehen, Zeiten im Dialog eintragen.
+- Gespeichert wird im Google Sheet (Blatt „Belegung“) über ein Google-Skript mit Passwort.
+- Einrichtung: siehe [ANLEITUNG.md](ANLEITUNG.md). Links stehen in `config.js`.
+- Ausprobieren ohne Speichern: `admin.html#demo`
