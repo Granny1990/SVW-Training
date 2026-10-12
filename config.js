@@ -6,7 +6,7 @@
    EDIT_URL:   optional, z. B. Link zur Admin-Seite für Trainer.
    ============================================================ */
 window.SVW_CONFIG = {
-  SCRIPT_URL: "",
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyi9ap-xMU1Ulbqsvg1CTcCzKpA5tnfrWfuLGcpUvCd4G2GoZpBY_qs_qpFoWxJzrZm/exec",
   CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTsJn-U8CsltLXoegVbvt5IdjqCm4IonPHYXs2ux0BX0q_g5KftEQiTBciG8bvutg/pub?gid=1557920811&single=true&output=csv",
   EDIT_URL: ""
 };
