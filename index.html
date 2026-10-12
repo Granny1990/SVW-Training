@@ -39,6 +39,7 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+#app{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 var(--body);-webkit-text-size-adjust:100%}
 button,select{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -98,7 +99,7 @@ button{cursor:pointer}
 .m-foot a{color:var(--accent)}
 
 /* ================= DESKTOP ================= */
-.d-app{min-height:100%;display:grid;grid-template-rows:auto 1fr auto;font-size:clamp(13px,0.95vw,22px)}
+.d-app{height:100%;display:grid;grid-template-rows:auto 1fr auto;font-size:clamp(13px,0.95vw,22px)}
 .d-top{background:var(--navy);color:var(--navy-ink);display:flex;align-items:center;gap:1.4em;padding:.7em 1.4em}
 .d-brand small{display:block;font:600 .8em/1 var(--display);letter-spacing:.14em;text-transform:uppercase;opacity:.75}
 .d-brand b{display:block;font:700 2em/1 var(--display);text-transform:uppercase;letter-spacing:.02em;margin-top:.15em}
@@ -111,10 +112,10 @@ button{cursor:pointer}
 .d-tools select{height:2.3em;border-radius:.4em;border:0;background:rgba(255,255,255,.14);color:inherit;padding:0 .6em;font-size:1em}
 .d-tools select option{color:#141a2b;background:#fff}
 .d-stand{font-size:.85em;opacity:.8;text-align:right;white-space:nowrap}
-.d-grid{display:grid;grid-template-columns:minmax(9em,11%) repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border-block:1px solid var(--line);min-height:0}
+.d-grid{display:grid;grid-template-columns:minmax(9em,11%) repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border-block:1px solid var(--line);min-height:0;overflow:auto}
 .d-grid > div{background:var(--surface);min-width:0}
 .d-corner{background:var(--surface-2)!important}
-.d-dh{background:var(--surface-2)!important;padding:.55em .8em;display:flex;align-items:baseline;gap:.5em}
+.d-dh{background:var(--surface-2)!important;position:sticky;top:0;z-index:1;padding:.55em .8em;display:flex;align-items:baseline;gap:.5em}
 .d-dh b{font:700 1.45em/1 var(--display);text-transform:uppercase;letter-spacing:.03em}
 .d-dh small{color:var(--muted);font-variant-numeric:tabular-nums}
 .d-dh.is-today{background:var(--navy)!important;color:var(--navy-ink)}

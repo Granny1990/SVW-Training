@@ -33,6 +33,7 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+#root{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 var(--body)}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -59,7 +60,7 @@ button{cursor:pointer}
 
 /* App */
 .app{height:100%;display:grid;grid-template-rows:auto 1fr;min-height:0}
-.top{background:var(--navy);color:var(--navy-ink);display:flex;align-items:center;gap:14px;padding:8px 16px;flex-wrap:wrap}
+.top{background:var(--navy);color:var(--navy-ink);display:flex;align-items:center;gap:10px;padding:8px 16px;flex-wrap:wrap}
 .brand b{display:block;font:700 22px/1 var(--display);text-transform:uppercase}
 .brand small{display:block;font:600 11px/1 var(--display);letter-spacing:.14em;text-transform:uppercase;opacity:.75}
 .week{display:flex;align-items:center;gap:6px}
@@ -96,10 +97,10 @@ button{cursor:pointer}
 .cell.is-today{background:var(--today)!important}
 .cell.over{background:var(--accent-soft)!important;box-shadow:inset 0 0 0 2px var(--accent)}
 .cell.closed-cell{background:repeating-linear-gradient(135deg,var(--off-bg) 0 8px,var(--surface) 8px 16px)!important}
-.cell .tools{display:flex;gap:4px;justify-content:flex-end;margin-top:auto;opacity:.35;transition:opacity .15s}
+.cell .tools{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;margin-top:auto;opacity:.35;transition:opacity .15s}
 .cell:hover .tools,.cell:focus-within .tools{opacity:1}
 @media (hover:none){.cell .tools{opacity:1}}
-.tool{height:24px;border-radius:6px;border:1px solid var(--line-2);background:var(--surface);font-size:12px;padding:0 7px;color:var(--muted)}
+.tool{white-space:nowrap;height:24px;border-radius:6px;border:1px solid var(--line-2);background:var(--surface);font-size:12px;padding:0 7px;color:var(--muted)}
 .tool:hover{color:var(--fg)}
 .closedlabel{font:600 13px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--off);text-align:center;padding:6px 0}
 .slot{display:flex;align-items:center;gap:6px;border-radius:6px;padding:6px 8px;min-width:0;cursor:grab;touch-action:none;user-select:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);flex-wrap:wrap}
@@ -111,7 +112,7 @@ button{cursor:pointer}
 .slot.off b,.slot.off span{text-decoration:line-through}
 .slot.warn{box-shadow:inset 0 0 0 2px var(--warn)}
 .slot.dragging-src{opacity:.35}
-.ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:.95;width:160px}
+.drag-ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:.95;width:160px}
 body.is-dragging,body.is-dragging *{cursor:grabbing!important}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 
@@ -135,7 +136,7 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important}
 @media (max-width: 760px){
   .body{grid-template-columns:1fr;grid-template-rows:auto 1fr}
   .side{border-right:0;border-bottom:1px solid var(--line);flex-direction:column;max-height:none}
-  .palette{flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  .palette{flex-direction:row;flex-wrap:wrap}
   .pchip{flex:none}
   .side .hint.long{display:none}
 }
@@ -247,8 +248,7 @@ function render(){
     el("span",{class:"savestate"+(dirty?" dirty":"")}, dirty ? `Ungespeichert: ${[...state.dirty].sort().map(k=>"Woche ab "+dm(parseISO(k))).join(", ")}` : "Alles gespeichert"),
     dirty ? el("button",{class:"btn ghost",onclick:discard},"Verwerfen") : null,
     el("button",{class:"btn primary",id:"saveBtn",disabled:!dirty||state.saving,onclick:save}, state.saving ? "Speichert …" : "Speichern"),
-    el("span",{class:"who"}, user.name),
-    el("button",{class:"btn ghost",onclick:logout},"Abmelden"));
+    el("button",{class:"btn ghost",onclick:logout,title:"Abmelden"}, `${user.name} · Abmelden`));
 
   const palette = el("div",{class:"palette"}, ...allTeams().map(t=>{
     const [bg,fg] = colorOf(t);
@@ -438,7 +438,7 @@ document.addEventListener("pointermove", e => {
   if (!drag.started){
     if (Math.hypot(e.clientX-drag.x0, e.clientY-drag.y0) < 6) return;
     drag.started = true;
-    const g = drag.src.cloneNode(true); g.classList.add("ghost"); g.classList.remove("dragging-src");
+    const g = drag.src.cloneNode(true); g.classList.add("drag-ghost"); g.classList.remove("dragging-src");
     document.body.append(g); drag.ghost = g;
     if (drag.payload.kind === "slot") drag.src.classList.add("dragging-src");
     document.body.classList.add("is-dragging");
