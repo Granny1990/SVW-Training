@@ -20,11 +20,12 @@ const ADMINS = {
 
 const SHEET_NAME = "Belegung";
 const LOG_NAME = "Protokoll";
-const HEADER = ["Woche ab (Montag)","Tag","Platz","Mannschaft","Beginn","Dauer (Min.)","Offenes Ende","Platzanteil","Status","Hinweis"];
+const HEADER = ["Woche ab (Montag)","Tag","Platz","Mannschaft","Beginn","Dauer (Min.)","Offenes Ende","Platzanteil","Status","Hinweis","Art","Gegner"];
 const DAYS = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag"];
 const PITCHES = ["Kleinspielfeld","Rasenplatz 1","Rasenplatz 2","Stadion","Kunstrasen 1","Kunstrasen 2"];
 const SHARES = ["ganz","halb","viertel"];
 const STATUSES = ["findet statt","abgesagt","Platz gesperrt"];
+const ARTS = ["Training","Spiel"];
 
 function doGet() {
   try {
@@ -32,7 +33,7 @@ function doGet() {
     const props = PropertiesService.getScriptProperties().getProperties();
     const versions = {};
     Object.keys(props).forEach(function (k) { if (k.indexOf("v_") === 0) versions[k.slice(2)] = props[k]; });
-    return json_({ ok: true, rows: sh.getDataRange().getDisplayValues(), updated: props.LAST_SAVE || null, versions: versions });
+    return json_({ ok: true, rows: sh.getDataRange().getDisplayValues(), updated: props.LAST_SAVE || null, versions: versions, features: ["spiele"] });
   } catch (err) {
     return json_({ ok: false, error: "lesen", detail: String(err) });
   }
@@ -82,7 +83,7 @@ function saveWeek_(req, who) {
   for (let i = 0; i < rows.length; i++) {
     const r = clean_(rows[i]);
     if (!r) return { ok: false, error: "row", row: i };
-    fresh.push([monday, r.tag, r.platz, r.team, r.beginn, r.dauer, r.offen, r.anteil, r.status, r.hinweis]);
+    fresh.push([monday, r.tag, r.platz, r.team, r.beginn, r.dauer, r.offen, r.anteil, r.status, r.hinweis, r.art, r.gegner]);
   }
 
   const sh = sheet_();
@@ -94,7 +95,7 @@ function saveWeek_(req, who) {
     if (r.join("") === "") return;
     const wk = weekKeyOf_(r[0], tz);
     if (wk === week) return;
-    keep.push([wk ? isoToDate_(wk) : r[0], r[1], r[2], r[3], timeText_(r[4], tz), r[5], r[6], r[7], r[8], r[9]]);
+    keep.push([wk ? isoToDate_(wk) : r[0], r[1], r[2], r[3], timeText_(r[4], tz), r[5], r[6], r[7], r[8], r[9], r[10], r[11]]);
   });
 
   const all = keep.concat(fresh);
@@ -126,13 +127,15 @@ function clean_(r) {
   if (!r || typeof r !== "object") return null;
   const tag = String(r.tag || ""), platz = String(r.platz || ""), status = String(r.status || "findet statt");
   if (DAYS.indexOf(tag) < 0 || PITCHES.indexOf(platz) < 0 || STATUSES.indexOf(status) < 0) return null;
-  if (status === "Platz gesperrt") return { tag: tag, platz: platz, team: "", beginn: "", dauer: "", offen: "", anteil: "", status: status, hinweis: "" };
+  if (status === "Platz gesperrt") return { tag: tag, platz: platz, team: "", beginn: "", dauer: "", offen: "", anteil: "", status: status, hinweis: "", art: "", gegner: "" };
   const team = safe_(r.team, 40);
   const beginn = String(r.beginn || "");
   const dauer = parseInt(r.dauer, 10);
   const anteil = String(r.anteil || "ganz");
-  if (!team || !/^\d{1,2}:\d{2}$/.test(beginn) || !(dauer >= 15 && dauer <= 300) || SHARES.indexOf(anteil) < 0) return null;
-  return { tag: tag, platz: platz, team: team, beginn: beginn, dauer: dauer, offen: r.offen ? "ja" : "", anteil: anteil, status: status, hinweis: safe_(r.hinweis, 120) };
+  const art = String(r.art || "Training");
+  if (!team || !/^\d{1,2}:\d{2}$/.test(beginn) || !(dauer >= 15 && dauer <= 300) || SHARES.indexOf(anteil) < 0 || ARTS.indexOf(art) < 0) return null;
+  return { tag: tag, platz: platz, team: team, beginn: beginn, dauer: dauer, offen: r.offen ? "ja" : "", anteil: anteil, status: status, hinweis: safe_(r.hinweis, 120),
+           art: art, gegner: art === "Spiel" ? safe_(r.gegner, 60) : "" };
 }
 
 // Text ohne Formel-Anfang, gekürzt
@@ -145,7 +148,12 @@ function safe_(v, max) {
 function sheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sh = ss.getSheetByName(SHEET_NAME);
-  if (!sh) { sh = ss.insertSheet(SHEET_NAME); sh.getRange(1, 1, 1, HEADER.length).setValues([HEADER]); }
+  if (!sh) sh = ss.insertSheet(SHEET_NAME);
+  // Kopfzeile ergänzen (z. B. die Spalten "Art" und "Gegner" in älteren Tabellen)
+  const head = sh.getRange(1, 1, 1, HEADER.length).getDisplayValues()[0];
+  if (head.some(function (h, i) { return h === "" && HEADER[i]; })) {
+    sh.getRange(1, 1, 1, HEADER.length).setValues([head.map(function (h, i) { return h || HEADER[i]; })]);
+  }
   return sh;
 }
 
@@ -184,6 +192,26 @@ function weekKeyOf_(v, tz) {
 function timeText_(v, tz) {
   if (v instanceof Date) return Utilities.formatDate(v, tz, "HH:mm");
   return v === null || v === undefined ? "" : String(v);
+}
+
+/**
+ * EINMALIG im Editor ausführen: stellt alle Trainings mit 75 Minuten auf 90 Minuten um.
+ * Spiele und andere Dauern (z. B. 105 Minuten) bleiben unverändert.
+ */
+function trainingsAuf90Minuten() {
+  const sh = sheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return;
+  const range = sh.getRange(2, 6, last - 1, 7); // Spalten F (Dauer) bis L (Art)
+  const vals = range.getValues();
+  let n = 0;
+  vals.forEach(function (r) { if (Number(r[0]) === 75 && r[6] !== "Spiel") { r[0] = 90; n++; } });
+  sh.getRange(2, 6, last - 1, 1).setValues(vals.map(function (r) { return [r[0]]; }));
+  const props = PropertiesService.getScriptProperties();
+  const version = new Date().toISOString();
+  Object.keys(props.getProperties()).forEach(function (k) { if (k.indexOf("v_") === 0) props.setProperty(k, version); });
+  props.setProperty("LAST_SAVE", version);
+  Logger.log(n + " Trainings auf 90 Minuten umgestellt.");
 }
 
 /** Zum Testen im Editor: Funktion "testLesen" auswählen und Ausführen. */

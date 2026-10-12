@@ -113,6 +113,7 @@ button{cursor:pointer}
 .slot span{margin-left:auto;font:600 14px/1 var(--display);font-variant-numeric:tabular-nums;white-space:nowrap}
 .slot i{font-style:normal;font-size:11px;opacity:.85}
 .slot .note{flex-basis:100%;font:500 11px/1.2 var(--body);opacity:.9}
+.slot .gm{font:700 10px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;padding:2px 4px;border-radius:3px}
 .slot.off{background:repeating-linear-gradient(135deg,var(--off-bg) 0 6px,var(--surface) 6px 12px)!important;color:var(--off)!important}
 .slot.off b,.slot.off span{text-decoration:line-through}
 .slot.warn{box-shadow:inset 0 0 0 2px var(--warn)}
@@ -131,6 +132,7 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important}
 .seg button{flex:1;height:36px;border:0;background:var(--surface-2);font-weight:600;font-size:13px}
 .seg button+button{border-left:1px solid var(--line-2)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.seg button:disabled{opacity:.4;cursor:default}
 .check{display:flex;align-items:center;gap:8px;font-size:13px}
 .check input{width:18px;height:18px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -151,11 +153,12 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important}
 <div id="root"></div>
 <div id="dialogHost"></div>
 <div id="toastHost"></div>
-<script src="config.js?v=4"></script>
-<script src="core.js?v=4"></script>
+<script src="config.js?v=5"></script>
+<script src="core.js?v=5"></script>
 <script>
 const DEMO = location.hash === "#demo";
-let plan = {weeks:{}}, versions = {}, user = null;
+let plan = {weeks:{}}, versions = {}, user = null, features = [];
+const gamesOk = () => DEMO || features.includes("spiele");
 let state = {week:null, dirty:new Set(), saving:false};
 let customTeams = [];
 try { customTeams = JSON.parse(store.get("svw-admin-teams") || "[]"); } catch { customTeams = []; }
@@ -221,7 +224,7 @@ function showLogin(msg){
 
 async function reload(keepWeek){
   const res = await loadPlanData();
-  plan = res.plan; versions = res.versions || {};
+  plan = res.plan; versions = res.versions || {}; features = res.features || [];
   state.dirty.clear();
   if (!keepWeek || !state.week){
     const cur = currentWeekKey();
@@ -286,16 +289,18 @@ function render(){
         const [bg,fg] = colorOf(s.team);
         const slot = el("div",{class:"slot"+(s.off?" off":"")+(bad.has(s.id)?" warn":""),style:`background:${bg};color:${fg}`,
           tabindex:"0",role:"button","data-id":s.id,
-          "aria-label":`${s.team}, ${startLabel(s)} Uhr. Enter zum Bearbeiten.`,
-          title:`${s.team} · ${startLabel(s)}${s.ab?"":"–"+fmt(toMin(s.t)+s.dur)} Uhr${s.share?" · "+SHARE_LABEL[s.share]:""}${bad.has(s.id)?" · Überschneidung":""}`},
-          el("b",{},s.team), s.share ? el("i",{},SHARE_SHORT[s.share]) : null, el("span",{},startLabel(s)),
-          s.note ? el("div",{class:"note"},s.note) : null);
+          "aria-label":`${s.team}${s.game?", "+gameLabel(s):""}, ${startLabel(s)} Uhr. Enter zum Bearbeiten.`,
+          title:`${s.team}${s.game?" · "+gameLabel(s):""} · ${startLabel(s)}${s.ab?"":"–"+fmt(toMin(s.t)+s.dur)} Uhr${s.share?" · "+SHARE_LABEL[s.share]:""}${bad.has(s.id)?" · Überschneidung":""}`},
+          el("b",{},s.team), s.game ? el("em",{class:"gm",style:`background:${fg};color:${bg};font-style:normal`},"Spiel") : null,
+          s.share ? el("i",{},SHARE_SHORT[s.share]) : null, el("span",{},startLabel(s)),
+          (s.game && s.opp) || s.note ? el("div",{class:"note"},[s.game && s.opp ? "gg. "+s.opp : null, s.note].filter(Boolean).join(" · ")) : null);
         slot.addEventListener("pointerdown", e => startDrag(e, {kind:"slot", id:s.id}, slot));
         slot.addEventListener("keydown", e => { if (e.key==="Enter"||e.key===" "){ e.preventDefault(); openDialog({slot:s}); } });
         cell.append(slot);
       }
       cell.append(el("div",{class:"tools"},
         el("button",{class:"tool",onclick:()=>openDialog({p:p.id, d}),"aria-label":`Training hinzufügen: ${p.name}, ${DAYS[d]}`},"+ Training"),
+        el("button",{class:"tool",onclick:()=>openDialog({p:p.id, d, game:true}),"aria-label":`Spiel hinzufügen: ${p.name}, ${DAYS[d]}`},"+ Spiel"),
         el("button",{class:"tool",onclick:()=>toggleClosed(p.id,d)}, closed ? "Freigeben" : "Sperren")));
       grid.append(cell);
     }
@@ -323,8 +328,8 @@ function copyPrevWeek(){
     openConfirm("Vorwoche übernehmen?", "Die Einträge dieser Woche werden durch die der Vorwoche ersetzt. Gespeichert wird erst mit „Speichern“.", "Ersetzen", doCopy);
   } else doCopy();
   function doCopy(){
-    plan.weeks[state.week] = {closed:{...prev.closed}, slots: prev.slots.map(s => ({...s, id:uid(), off:false, note:undefined}))};
-    markDirty(); render(); toast("Vorwoche übernommen. Absagen und Hinweise wurden nicht mitkopiert.");
+    plan.weeks[state.week] = {closed:{...prev.closed}, slots: prev.slots.filter(s => !s.game).map(s => ({...s, id:uid(), off:false, note:undefined}))};
+    markDirty(); render(); toast("Vorwoche übernommen. Spiele, Absagen und Hinweise wurden nicht mitkopiert.");
   }
 }
 function discard(){
@@ -354,7 +359,8 @@ async function saveWeek(wk){
   }
   for (const s of w.slots){
     rows.push({tag:DAYS[s.d], platz:pitch(s.p).name, team:s.team, beginn:s.t, dauer:s.dur, offen:!!s.ab,
-      anteil: s.share ? SHARE_WORD[s.share] : "ganz", status: s.off ? "abgesagt" : "findet statt", hinweis: s.note || ""});
+      anteil: s.share ? SHARE_WORD[s.share] : "ganz", status: s.off ? "abgesagt" : "findet statt", hinweis: s.note || "",
+      art: s.game ? "Spiel" : "Training", gegner: s.game ? (s.opp || "") : ""});
   }
   try {
     const res = await api({action:"save", name:user.name, password:user.password, week:wk, base: versions[wk] || "", rows});
@@ -369,13 +375,13 @@ function suggestStart(pid, d){
   const ss = W().slots.filter(s=>s.p===pid && s.d===d && !s.ab).sort(byTime);
   if (!ss.length) return "17:00";
   const end = Math.max(...ss.map(s=>toMin(s.t)+s.dur));
-  return end > 21*60 ? "17:00" : fmt(Math.ceil(end/15)*15);
+  return end > 20*60+30 ? "17:00" : fmt(Math.ceil(end/15)*15);
 }
-function openDialog({slot, team, p, d}){
+function openDialog({slot, team, p, d, game}){
   const isNew = !slot;
   const draft = isNew
-    ? {team: team || "", p, d, t: suggestStart(p,d), dur:75, ab:false, share:"", off:false, note:""}
-    : {...slot, share: slot.share || "", note: slot.note || ""};
+    ? {team: team || "", p, d, t: suggestStart(p,d), dur: game ? GAME_DUR : TRAIN_DUR, ab:false, share:"", off:false, note:"", game: !!game && gamesOk(), opp:""}
+    : {...slot, share: slot.share || "", note: slot.note || "", game: !!slot.game, opp: slot.opp || ""};
   const close = () => $("#dialogHost").replaceChildren();
   const seg = (key, opts) => { const wrap = el("div",{class:"seg"});
     const paint = () => [...wrap.children].forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.v===String(draft[key]))));
@@ -385,9 +391,27 @@ function openDialog({slot, team, p, d}){
     el("button",{type:"button",onclick:()=>{$("#f-time").value=t;}},t)));
   const [bg,fg] = colorOf(draft.team);
   let armed = false;
+  const title = el("span",{});
+  const oppField = el("div",{class:"field full"}, el("label",{for:"f-opp"},"Gegner"), el("input",{id:"f-opp",value:draft.opp,maxlength:"60",placeholder:"z. B. TuS Uentrop"}));
+  const kind = el("div",{class:"seg"}, ...[[false,"Training"],[true,"Spiel"]].map(([v,l]) =>
+    el("button",{type:"button","data-v":String(v),disabled:v && !gamesOk() && !draft.game,onclick:()=>setKind(v)},l)));
+  function setKind(v){
+    const durIn = $("#f-dur");
+    if (durIn && +durIn.value === (draft.game ? GAME_DUR : TRAIN_DUR)) durIn.value = v ? GAME_DUR : TRAIN_DUR;
+    draft.game = v; paintKind();
+  }
+  function paintKind(){
+    [...kind.children].forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.v===String(draft.game))));
+    oppField.hidden = !draft.game;
+    title.textContent = (draft.game ? "Spiel" : "Training") + (isNew ? " eintragen" : " bearbeiten");
+  }
+  paintKind();
   const form = el("form",{class:"dialog",onsubmit:e=>{e.preventDefault(); submit();}},
-    el("h3",{}, isNew ? "Training eintragen" : "Training bearbeiten", draft.team ? el("span",{class:"tag",style:`background:${bg};color:${fg}`},draft.team) : null),
+    el("h3",{}, title, draft.team ? el("span",{class:"tag",style:`background:${bg};color:${fg}`},draft.team) : null),
     el("div",{class:"fgrid"},
+      el("div",{class:"field full"}, el("label",{},"Art"), kind,
+        gamesOk() ? null : el("small",{style:"color:var(--muted);font-size:12px"},"Spiele: erst das Google-Skript aktualisieren (siehe ANLEITUNG.md).")),
+      oppField,
       el("div",{class:"field full"}, el("label",{for:"f-team"},"Mannschaft"), el("input",{id:"f-team",list:"teamlist",value:draft.team,autocomplete:"off"}),
         el("datalist",{id:"teamlist"}, ...allTeams().map(t=>el("option",{value:t})))),
       el("div",{class:"field"}, el("label",{for:"f-day"},"Tag"), el("select",{id:"f-day"}, ...DAYS.map((n,i)=>el("option",{value:i,selected:i===draft.d},n)))),
@@ -415,7 +439,8 @@ function openDialog({slot, team, p, d}){
     if (!/^\d{2}:\d{2}$/.test(t)){ err.textContent = "Bitte eine Uhrzeit wählen."; return; }
     if (!(dur>=15 && dur<=300)){ err.textContent = "Dauer zwischen 15 und 300 Minuten."; return; }
     const rec = {id: isNew ? uid() : slot.id, d:+$("#f-day").value, p:$("#f-pitch").value, team, t, dur,
-      ab: $("#f-ab").checked, share: draft.share || undefined, off: draft.off === true || draft.off === "true", note: $("#f-note").value.trim() || undefined};
+      ab: $("#f-ab").checked, share: draft.share || undefined, off: draft.off === true || draft.off === "true", note: $("#f-note").value.trim() || undefined,
+      game: draft.game || undefined, opp: draft.game ? ($("#f-opp").value.trim().slice(0,60) || undefined) : undefined};
     const w = W();
     if (isNew) w.slots.push(rec); else w.slots[w.slots.findIndex(x=>x.id===slot.id)] = rec;
     markDirty(); close(); render();

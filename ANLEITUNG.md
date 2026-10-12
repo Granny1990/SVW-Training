@@ -35,3 +35,13 @@ In `config.js` bei `SCRIPT_URL` die Web-App-URL eintragen (oder sie Claude schic
 - Admin: https://granny1990.github.io/svw-training/admin.html
 - Wer wann gespeichert hat, steht im Blatt **Protokoll**.
 - Passwort ändern oder Person hinzufügen: in `Code.gs` bei `ADMINS` ändern, dann **Bereitstellen → Bereitstellungen verwalten → Stift → Version: Neue Version → Bereitstellen**. Der Link bleibt gleich.
+
+## Skript aktualisieren (Spiele und 90 Minuten)
+Für Spiele braucht das Sheet zwei neue Spalten (**Art**, **Gegner**). Die legt das neue Skript selbst an.
+1. In der Google-Tabelle: **Erweiterungen → Apps Script**.
+2. Ganz oben die Zeilen mit `ADMINS` (Namen und Passwörter) kopieren und zur Seite legen.
+3. Den Inhalt von `Code.gs` komplett durch [`google-skript/Code.gs`](google-skript/Code.gs) ersetzen und die `ADMINS`-Zeilen wieder einfügen. Speichern.
+4. **Bereitstellen → Bereitstellungen verwalten → Stift → Version: Neue Version → Bereitstellen**. Der Link bleibt gleich.
+5. Einmalig 75 → 90 Minuten: Oben in der Funktionsauswahl **trainingsAuf90Minuten** wählen und **Ausführen**. Im Ausführungsprotokoll steht, wie viele Trainings umgestellt wurden. Danach nicht noch einmal nötig.
+
+Bis Schritt 4 erledigt ist, kann die Admin-Seite nur Trainings speichern (die Auswahl „Spiel“ ist ausgegraut).

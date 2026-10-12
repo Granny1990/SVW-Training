@@ -51,6 +51,8 @@ button{cursor:pointer}
 .flag{font:600 11px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;padding:3px 5px;border-radius:4px;white-space:nowrap}
 .flag.off{background:var(--off-bg);color:var(--off)}
 .flag.warn{border:1px solid var(--warn);color:var(--warn)}
+.flag.game{background:var(--fg);color:var(--bg)}
+.gm{font-style:normal;font:700 .72em/1 var(--display);letter-spacing:.08em;text-transform:uppercase;padding:.2em .35em;border-radius:.25em;white-space:nowrap}
 .status{font-size:13px;color:var(--muted);text-align:center;margin:12px 16px}
 .status.err{color:var(--off)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;max-width:calc(100% - 32px);text-align:center}
@@ -155,8 +157,8 @@ button{cursor:pointer}
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="config.js?v=4"></script>
-<script src="core.js?v=4"></script>
+<script src="config.js?v=5"></script>
+<script src="core.js?v=5"></script>
 <script>
 let plan = {weeks:{}}; let loadedAt = null; let updatedAt = null;
 let state = {week:null, day:0, team:""};
@@ -184,9 +186,9 @@ function planText(){
   const w = W(); const mon = parseISO(state.week);
   const sh = s => s.share ? ` (${SHARE_SHORT[s.share]})` : "";
   if (state.team){
-    const out = [`*${state.team} – Training ${dm(mon)}–${dm(addDays(mon,4))}*`];
+    const out = [`*${state.team} – Woche ${dm(mon)}–${dm(addDays(mon,4))}*`];
     for (let d=0; d<5; d++) for (const s of w.slots.filter(x=>x.team===state.team && x.d===d).sort(byTime))
-      out.push(`${DSHORT[d]} ${dm(addDays(mon,d))}: ${startLabel(s)}, ${pitch(s.p).name}${s.off?" – ABGESAGT":""}`);
+      out.push(`${DSHORT[d]} ${dm(addDays(mon,d))}: ${s.game ? gameLabel(s)+", " : ""}${startLabel(s)}, ${pitch(s.p).name}${s.off?" – ABGESAGT":""}`);
     return out.join("\n");
   }
   const d = state.day; const out = [`*Platzbelegung ${DAYS[d]}, ${dm(addDays(mon,d))}*`];
@@ -195,7 +197,7 @@ function planText(){
     const closed = w.closed[`${p.id}-${d}`];
     if (!ps.length && !closed && !p.request) continue;
     out.push(`\n_${p.name}_` + (closed ? ` – ${closed}` : p.request && !ps.length ? " – nach Rücksprache" : ""));
-    ps.forEach(s=>out.push(`${startLabel(s)} ${s.team}${sh(s)}${s.off?" – ABGESAGT":""}${s.note?" – "+s.note:""}`));
+    ps.forEach(s=>out.push(`${startLabel(s)} ${s.team}${sh(s)}${s.game?" – "+gameLabel(s):""}${s.off?" – ABGESAGT":""}${s.note?" – "+s.note:""}`));
   }
   return out.join("\n");
 }
@@ -260,7 +262,7 @@ function mobileView(){
 }
 function mobileDay(w, mon, bad){
   const d = state.day; const slots = w.slots.filter(s=>s.d===d);
-  const out = [el("div",{class:"m-head"}, el("h2",{},`${DAYS[d]}, ${dm(addDays(mon,d))}`), el("span",{},`${slots.filter(s=>!s.off).length} Trainings`))];
+  const out = [el("div",{class:"m-head"}, el("h2",{},`${DAYS[d]}, ${dm(addDays(mon,d))}`), el("span",{},countText(slots)))];
   for (const p of PITCHES){
     const ps = slots.filter(s=>s.p===p.id).sort(byTime); const closed = w.closed[`${p.id}-${d}`];
     const sec = el("section",{class:"m-pitch"},
@@ -270,6 +272,7 @@ function mobileDay(w, mon, bad){
       const ul = el("ul",{class:"m-list"});
       for (const s of ps){
         const meta = el("div",{class:"m-meta"});
+        if (s.game){ meta.append(el("span",{class:"flag game"},"Spiel")); if (s.opp) meta.append(el("span",{},"gg. "+s.opp)); }
         if (s.share) meta.append(el("span",{},SHARE_LABEL[s.share]));
         if (s.note) meta.append(el("span",{},s.note));
         if (s.off) meta.append(el("span",{class:"flag off"},"Abgesagt"));
@@ -291,10 +294,11 @@ function mobileTeam(w, mon, bad){
   for (let d=0; d<5; d++){
     const ds = mine.filter(s=>s.d===d).sort(byTime);
     const col = el("div",{});
-    if (!ds.length) col.append(el("div",{class:"m-none"},"kein Training"));
+    if (!ds.length) col.append(el("div",{class:"m-none"},"kein Termin"));
     for (const s of ds){
       const it = el("div",{class:"m-ag-item"},
         el("span",{class:"m-time",style:s.off?"text-decoration:line-through;opacity:.55":""}, startLabel(s)),
+        s.game ? el("span",{class:"flag game"},gameLabel(s)) : null,
         el("span",{}, pitch(s.p).name + (s.share ? ` (${SHARE_SHORT[s.share]})` : "")));
       if (s.note) it.append(el("span",{class:"m-meta"},s.note));
       if (s.off) it.append(el("span",{class:"flag off"},"Abgesagt"));
@@ -304,7 +308,11 @@ function mobileTeam(w, mon, bad){
     }
     wrap.append(el("section",{class:"m-pitch"}, el("div",{class:"m-dn"},DSHORT[d], el("small",{},dm(addDays(mon,d)))), col));
   }
-  return [el("div",{class:"m-head"}, el("h2",{}, teamTag(t), " Trainingswoche"), el("span",{},`${mine.filter(s=>!s.off).length} Einheiten`)), wrap];
+  return [el("div",{class:"m-head"}, el("h2",{}, teamTag(t), " Woche"), el("span",{},countText(mine))), wrap];
+}
+function countText(slots){
+  const on = slots.filter(s=>!s.off); const g = on.filter(s=>s.game).length; const t = on.length - g;
+  return [`${t} Training${t===1?"":"s"}`, g ? `${g} Spiel${g===1?"":"e"}` : null].filter(Boolean).join(" · ");
 }
 
 /* ===== desktop ===== */
@@ -339,11 +347,13 @@ function desktopView(){
       else if (p.request && !ps.length) cell.append(el("div",{class:"d-fill req"},"nach Rücksprache"));
       for (const s of ps){
         const [bg,fg] = colorOf(s.team);
-        const cls = "d-slot"+(s.off?" off":"")+(bad.has(s.id)?" warn":"")+(state.team && s.team!==state.team?" dim":"")+(s.note?" has-note":"");
+        const sub = [s.game && s.opp ? "gg. "+s.opp : null, s.note].filter(Boolean).join(" · ");
+        const cls = "d-slot"+(s.off?" off":"")+(bad.has(s.id)?" warn":"")+(state.team && s.team!==state.team?" dim":"")+(sub?" has-note":"");
         cell.append(el("div",{class:cls,style:`background:${bg};color:${fg}`,
-          title:`${s.team} · ${startLabel(s)}${s.ab?"":"–"+fmt(toMin(s.t)+s.dur)} Uhr${s.share?" · "+SHARE_LABEL[s.share]:""}${s.off?" · abgesagt":""}${bad.has(s.id)?" · Überschneidung prüfen":""}`},
-          el("b",{},s.team), s.share ? el("i",{},SHARE_SHORT[s.share]) : null, el("span",{}, startLabel(s)),
-          s.note ? el("div",{class:"note"},s.note) : null));
+          title:`${s.team}${s.game?" · "+gameLabel(s):""} · ${startLabel(s)}${s.ab?"":"–"+fmt(toMin(s.t)+s.dur)} Uhr${s.share?" · "+SHARE_LABEL[s.share]:""}${s.off?" · abgesagt":""}${bad.has(s.id)?" · Überschneidung prüfen":""}`},
+          el("b",{},s.team), s.game ? el("em",{class:"gm",style:`background:${fg};color:${bg}`},"Spiel") : null,
+          s.share ? el("i",{},SHARE_SHORT[s.share]) : null, el("span",{}, startLabel(s)),
+          sub ? el("div",{class:"note"},sub) : null));
       }
       grid.append(cell);
     }
@@ -352,6 +362,7 @@ function desktopView(){
   const foot = el("footer",{class:"d-foot"},
     el("span",{}, el("i",{class:"sw",style:"background:repeating-linear-gradient(135deg,var(--off-bg) 0 3px,transparent 3px 6px);border:1px solid var(--off)"}),"gesperrt / abgesagt"),
     el("span",{}, el("i",{class:"sw",style:"border:2px solid var(--warn)"}),"Überschneidung prüfen"),
+    el("span",{}, el("em",{class:"gm",style:"background:var(--fg);color:var(--bg);margin-right:.4em"},"Spiel"),"Heimspiel"),
     el("span",{}, "¼ / ½ = Platzanteil"),
     el("span",{}, FOOTER),
     el("span",{class:"right"},

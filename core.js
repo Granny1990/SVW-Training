@@ -9,21 +9,23 @@ const PITCHES = [
   {id:"k1", short:"Kunst 1", name:"Kunstrasen 1",   area:"Campus powered by Munk · Vereinsheimseite"},
   {id:"k2", short:"Kunst 2", name:"Kunstrasen 2",   area:"Campus powered by Munk · Rhynernseite"}
 ];
-const FOOTER = "Trainingszeit 75 min. Änderungen witterungsbedingt vorbehalten.";
+const TRAIN_DUR = 90, GAME_DUR = 120;
+const FOOTER = `Trainingszeit ${TRAIN_DUR} min. Änderungen witterungsbedingt vorbehalten.`;
 const DAYS = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag"];
 const DSHORT = ["Mo","Di","Mi","Do","Fr"];
+/* Jede Mannschaft eine eigene Farbe. Schriftfarbe (hell/dunkel) wird nach Kontrast gewählt. */
 const TEAM_COLORS = {
-  "A1":["#2fae3c","#0d2410"], "A2":["#8fd3c9","#0f2b27"],
-  "B1":["#ee8a2a","#2b1500"], "B2":["#7f55c4","#ffffff"],
-  "C1":["#f1cd1f","#2a2300"], "C2":["#7c1e3f","#ffffff"],
-  "D1":["#d92aa8","#ffffff"], "D2":["#ea5b1f","#ffffff"], "D3":["#1aa6a2","#ffffff"],
-  "E1":["#c9d3e6","#16203a"], "E2":["#c9d3e6","#16203a"], "E3":["#c9d3e6","#16203a"],
-  "F1":["#dfe5f0","#16203a"], "F2":["#dfe5f0","#16203a"],
-  "1.M":["#5d6577","#ffffff"], "2.M":["#2b313e","#ffffff"], "Dritte":["#3c4a6b","#ffffff"],
-  "Alte Herren":["#8a6d45","#ffffff"], "Walking Football":["#5f7f3a","#ffffff"],
-  "Minis":["#f3a6c4","#3a0f20"]
+  "A1":"#2e9e44", "A2":"#a3d977",
+  "B1":"#f07d1a", "B2":"#7b4fc9",
+  "C1":"#f5c518", "C2":"#8c1d40",
+  "D1":"#d6309f", "D2":"#d93b2b", "D3":"#139e9b",
+  "E1":"#3b9de6", "E2":"#9fe0d6", "E3":"#b38ce6",
+  "F1":"#f7a08c", "F2":"#e6d3a3", "Minis":"#f7b6d2",
+  "1.M":"#275aa2", "2.M":"#1c2a48", "Dritte":"#6b7a99",
+  "Alte Herren":"#7a5230", "Walking Football":"#5f7d2a"
 };
-const DEFAULT_COLOR = ["#c9d3e6","#16203a"];
+/* Für Mannschaften, die nicht oben stehen: feste Farbe aus dem Namen. */
+const EXTRA_COLORS = ["#00838f","#ad1457","#ef6c00","#558b2f","#4527a0","#9e9d24","#6d4c41","#c2185b"];
 const SHARE_LABEL = {"1/2":"½ Platz","1/4":"¼ Platz"};
 const SHARE_SHORT = {"1/2":"½","1/4":"¼"};
 const SHARE_WORD = {"1/2":"halb","1/4":"viertel"};
@@ -53,7 +55,17 @@ const mondayOf = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getD
 /* Woche zu einem Datum in Spalte "Woche ab". Sa/So zählen zur folgenden Woche
    (ein Montag, der durch eine Zeitzonen-Verschiebung als Sonntag gespeichert wurde). */
 const weekKeyOf = d => { const wd = d.getDay(); return isoDate(mondayOf(wd===0 ? addDays(d,1) : wd===6 ? addDays(d,2) : d)); };
-const colorOf = team => TEAM_COLORS[team] || DEFAULT_COLOR;
+function inkOn(hex){
+  const lin = c => { c /= 255; return c <= .03928 ? c/12.92 : ((c+.055)/1.055)**2.4; };
+  const n = parseInt(hex.slice(1),16); const L = .2126*lin(n>>16)+.7152*lin((n>>8)&255)+.0722*lin(n&255);
+  return (L+.05)/.0625 >= 1.05/(L+.05) ? "#16203a" : "#ffffff";
+}
+function colorOf(team){
+  let bg = TEAM_COLORS[team];
+  if (!bg){ let h = 0; for (const ch of String(team)) h = (h*31 + ch.charCodeAt(0)) >>> 0; bg = EXTRA_COLORS[h % EXTRA_COLORS.length]; }
+  return [bg, inkOn(bg)];
+}
+const gameLabel = s => "Spiel" + (s.opp ? " gg. " + s.opp : "");
 const pitch = id => PITCHES.find(p => p.id === id);
 const byTime = (a,b) => toMin(a.t)-toMin(b.t);
 const startLabel = s => (s.ab ? "ab " : "") + s.t;
@@ -100,7 +112,8 @@ function buildPlanFromRows(rowsIn){
   const H = rows[0].map(norm);
   const col = name => H.findIndex(h => h.startsWith(name));
   const C = {w:col("woche"), d:col("tag"), p:col("platz"), team:col("mannschaft"), t:col("beginn"),
-             dur:col("dauer"), ab:col("offenes"), share:col("platzanteil"), st:col("status"), note:col("hinweis")};
+             dur:col("dauer"), ab:col("offenes"), share:col("platzanteil"), st:col("status"), note:col("hinweis"),
+             art:col("art"), opp:col("gegner")};
   if (C.w<0 || C.d<0 || C.p<0) throw new Error("spalten");
   const weeks = {}; let n = 0;
   for (const r of rows.slice(1)){
@@ -114,10 +127,11 @@ function buildPlanFromRows(rowsIn){
     if (status.startsWith("platz gesperrt") || status === "gesperrt"){ wk.closed[`${p.id}-${d}`] = "Gesperrt"; continue; }
     const tm = (r[C.t]||"").match(/(\d{1,2})[:.](\d{2})/); const team = (r[C.team]||"").trim();
     if (!tm || !team) continue;
-    const dur = parseInt(r[C.dur],10);
-    wk.slots.push({id:"r"+(n++), d, p:p.id, team, t:`${pad(+tm[1])}:${tm[2]}`, dur: dur>=15 && dur<=300 ? dur : 75,
+    const dur = parseInt(r[C.dur],10); const game = C.art >= 0 && norm(r[C.art]) === "spiel";
+    wk.slots.push({id:"r"+(n++), d, p:p.id, team, t:`${pad(+tm[1])}:${tm[2]}`, dur: dur>=15 && dur<=300 ? dur : game ? GAME_DUR : TRAIN_DUR,
       ab: norm(r[C.ab]) === "ja", share: {halb:"1/2", viertel:"1/4"}[norm(r[C.share])],
-      off: status === "abgesagt", note:(r[C.note]||"").trim() || undefined});
+      off: status === "abgesagt", note:(r[C.note]||"").trim() || undefined,
+      game: game || undefined, opp: game ? ((r[C.opp]||"").trim() || undefined) : undefined});
   }
   return {weeks};
 }
@@ -130,12 +144,12 @@ async function loadPlanData(){
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || "skript");
     const plan = buildPlanFromRows(j.rows || []);
-    return {plan, updated: j.updated ? new Date(j.updated) : null, versions: j.versions || {}};
+    return {plan, updated: j.updated ? new Date(j.updated) : null, versions: j.versions || {}, features: j.features || []};
   }
   if (!CFG.CSV_URL) throw new Error("keine Quelle");
   const r = await fetch(CFG.CSV_URL + (CFG.CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now());
   if (!r.ok) throw new Error("http");
-  return {plan: buildPlanFromRows(parseCSV(await r.text())), updated: null, versions: {}};
+  return {plan: buildPlanFromRows(parseCSV(await r.text())), updated: null, versions: {}, features: []};
 }
 
 /* ---------- logic ---------- */
