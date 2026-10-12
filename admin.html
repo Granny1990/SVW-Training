@@ -158,8 +158,8 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important}
 <div id="root"></div>
 <div id="dialogHost"></div>
 <div id="toastHost"></div>
-<script src="config.js?v=7"></script>
-<script src="core.js?v=7"></script>
+<script src="config.js?v=8"></script>
+<script src="core.js?v=8"></script>
 <script>
 const DEMO = location.hash === "#demo";
 let plan = {weeks:{}}, versions = {}, user = null, features = [];
@@ -259,6 +259,7 @@ function render(){
       el("button",{class:"nav","aria-label":"Nächste Woche",onclick:()=>goWeek(7)},"›"),
       state.week!==currentWeekKey() ? el("button",{class:"btn ghost",onclick:()=>{state.week=currentWeekKey();render();}},"Diese Woche") : null),
     el("button",{class:"btn ghost",onclick:copyPrevWeek,title:"Alle Einträge der Vorwoche in diese Woche übernehmen"},"Vorwoche übernehmen"),
+    el("button",{class:"btn ghost",onclick:doPrint,title:"Woche als PDF speichern, teilen oder drucken"},"PDF"),
     el("div",{class:"spacer"}),
     el("span",{class:"savestate"+(dirty?" dirty":"")}, dirty ? `Ungespeichert: ${[...state.dirty].sort().map(k=>"Woche ab "+dm(parseISO(k))).join(", ")}` : "Alles gespeichert"),
     dirty ? el("button",{class:"btn ghost",onclick:discard},"Verwerfen") : null,
@@ -315,6 +316,12 @@ function render(){
   $(".board").scrollLeft = scroll[0]; $(".board").scrollTop = scroll[1];
 }
 
+function doPrint(){
+  const draft = state.dirty.has(state.week);
+  toast(draft ? "Achtung: enthält ungespeicherte Änderungen. Im Druckfenster „Als PDF speichern“ wählen." : "Im Druckfenster „Als PDF speichern“ wählen.", 4000);
+  const now = new Date();
+  printWeek(W(), state.week, {draft, stand: draft ? "Entwurf – nicht gespeichert" : `Erstellt ${dm(now)}${now.getFullYear()}, ${pad(now.getHours())}:${pad(now.getMinutes())} Uhr`});
+}
 function goWeek(delta){
   state.week = isoDate(addDays(parseISO(state.week), delta)); render();
 }

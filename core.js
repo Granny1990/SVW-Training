@@ -171,3 +171,89 @@ function currentWeekKey(){
   const now = new Date(); const wd = now.getDay();
   return isoDate((wd===0||wd===6) ? addDays(mondayOf(now),7) : mondayOf(now));
 }
+
+/* ---------- PDF / Drucken ----------
+   Eigenes Druckblatt (A4 quer) für die angezeigte Woche. Im Druckfenster "Als PDF speichern" bzw. am Handy "Teilen". */
+const PRINT_CSS = `
+#printSheet{display:none}
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  body > *:not(#printSheet){display:none!important}
+  html,body{height:auto!important;background:#fff!important;overflow:visible!important}
+  #printSheet{display:block;color:#141a2b;font:8.5pt/1.25 "Barlow",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pr-head{display:flex;align-items:center;gap:4mm;border-bottom:1mm solid #275aa2;padding-bottom:2mm;margin-bottom:2.5mm}
+  .pr-head img{height:15mm;width:auto}
+  .pr-head small{display:block;font:600 8pt/1 "Barlow Condensed",Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#275aa2}
+  .pr-head b{display:block;font:700 20pt/1 "Barlow Condensed",Arial,sans-serif;text-transform:uppercase;margin-top:.6mm}
+  .pr-range{margin-left:auto;text-align:right;font:700 15pt/1.1 "Barlow Condensed",Arial,sans-serif}
+  .pr-range small{color:#5b6478;letter-spacing:0;text-transform:none;font:500 8pt "Barlow",Arial,sans-serif;margin-top:1mm}
+  .pr-draft{color:#b4530b!important;font-weight:700!important}
+  table.pr{width:100%;border-collapse:collapse;table-layout:fixed}
+  .pr th,.pr td{border:.25mm solid #c9d1e0;vertical-align:top;padding:1mm}
+  .pr thead th{background:#275aa2;color:#fff;font:700 10.5pt/1 "Barlow Condensed",Arial,sans-serif;text-transform:uppercase;text-align:left;padding:1.6mm 1.4mm}
+  .pr thead th small{font:500 8pt "Barlow",Arial,sans-serif;opacity:.85;margin-left:1mm;text-transform:none}
+  .pr th.pl{width:27mm;background:#f2f5fa;text-align:left;vertical-align:middle}
+  .pr th.pl b{display:block;font:700 10pt/1.05 "Barlow Condensed",Arial,sans-serif;text-transform:uppercase}
+  .pr th.pl small{display:block;font-weight:400;font-size:6.5pt;color:#5b6478;line-height:1.2;margin-top:.5mm}
+  .pr tr.pair-rasen td,.pr tr.pair-rasen th{background:#edf5ea}
+  .pr tr.pair-kunst td,.pr tr.pair-kunst th{background:#eaf0f9}
+  .pr tr.pair-rasen th.pl,.pr tr.pair-kunst th.pl{padding-left:2.8mm}
+  .pr tr.pair-rasen th.pl{box-shadow:inset 1.4mm 0 0 #4a9a52}
+  .pr tr.pair-kunst th.pl{box-shadow:inset 1.4mm 0 0 #275aa2}
+  .pr tr{break-inside:avoid}
+  thead{display:table-header-group}
+  .pr-s{display:flex;flex-wrap:wrap;align-items:center;gap:0 1.2mm;border-radius:1mm;padding:.7mm 1.3mm;margin-bottom:.8mm}
+  .pr-s b{font:700 9.5pt/1.1 "Barlow Condensed",Arial,sans-serif}
+  .pr-s i{font-style:normal;font-size:7pt;opacity:.9}
+  .pr-s em{font:700 6.5pt/1 "Barlow Condensed",Arial,sans-serif;font-style:normal;letter-spacing:.06em;text-transform:uppercase;padding:.3mm .8mm;border-radius:.6mm}
+  .pr-s .t{margin-left:auto;font:600 8.5pt/1.1 "Barlow Condensed",Arial,sans-serif;white-space:nowrap}
+  .pr-s .sub{flex-basis:100%;font-size:6.8pt;line-height:1.2}
+  .pr-s.off{background:#fff!important;color:#b3261e!important;box-shadow:inset 0 0 0 .25mm #b3261e}
+  .pr-s.off b,.pr-s.off .t{text-decoration:line-through}
+  .pr-fill{font:600 8pt/1 "Barlow Condensed",Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:1.6mm 0;color:#b3261e}
+  .pr-fill.req{color:#5b6478}
+  .pr-foot{margin-top:2mm;font-size:7.5pt;color:#5b6478;display:flex;gap:4mm;justify-content:space-between}
+}`;
+function printWeek(w, weekKey, info){
+  if (!document.getElementById("print-css")) document.head.append(el("style",{id:"print-css"}, PRINT_CSS));
+  const mon = parseISO(weekKey); const fri = addDays(mon,4);
+  const head = el("div",{class:"pr-head"},
+    el("img",{src:"logo.svg",alt:""}),
+    el("div",{}, el("small",{},"SV Westfalia Rhynern e.V."), el("b",{},"Trainingsplan")),
+    el("div",{class:"pr-range"}, `${dm(mon)} – ${dm(fri)}${fri.getFullYear()}`,
+      el("small",{class:info.draft ? "pr-draft" : ""}, info.stand || "")));
+  const thead = el("thead",{}, el("tr",{}, el("th",{class:"pl"}),
+    ...DAYS.map((n,d)=>el("th",{}, n, el("small",{},dm(addDays(mon,d)))))));
+  const tbody = el("tbody",{});
+  for (const p of PITCHES){
+    const tr = el("tr",{class:p.pair ? "pair-"+p.pair : ""}, el("th",{class:"pl"}, el("b",{},p.name), el("small",{},p.area)));
+    for (let d=0; d<5; d++){
+      const td = el("td",{}); const ps = w.slots.filter(s=>s.p===p.id && s.d===d).sort(byTime);
+      const closed = w.closed[`${p.id}-${d}`];
+      if (closed) td.append(el("div",{class:"pr-fill"},closed));
+      else if (p.request && !ps.length) td.append(el("div",{class:"pr-fill req"},"nach Rücksprache"));
+      for (const s of ps){
+        const [bg,fg] = colorOf(s.team);
+        const sub = [s.game && s.opp ? "gg. "+s.opp : null, s.off ? "abgesagt" : null, s.note].filter(Boolean).join(" · ");
+        td.append(el("div",{class:"pr-s"+(s.off?" off":""),style:`background:${bg};color:${fg}`},
+          el("b",{},s.team), s.game ? el("em",{style:`background:${fg};color:${bg}`},"Spiel") : null,
+          s.share ? el("i",{},SHARE_SHORT[s.share]) : null,
+          el("span",{class:"t"}, s.ab ? "ab "+s.t : `${s.t}–${fmt(toMin(s.t)+s.dur)}`),
+          sub ? el("span",{class:"sub"},sub) : null));
+      }
+      tr.append(td);
+    }
+    tbody.append(tr);
+  }
+  const foot = el("div",{class:"pr-foot"},
+    el("span",{}, FOOTER, " Platzanteil: ½ · ¼ · ⅓/⅔ d.H. (der Hälfte)."),
+    el("span",{}, "Aktuell: " + (location.host + location.pathname).replace(/[^/]*$/,"")));
+  const sheet = el("div",{id:"printSheet"}, head, el("table",{class:"pr"}, thead, tbody), foot);
+  document.getElementById("printSheet")?.remove(); document.body.append(sheet);
+  const title = document.title;
+  document.title = `Trainingsplan SVW ${isoDate(mon)}`;       // Vorschlag für den Dateinamen
+  window.addEventListener("afterprint", () => { document.title = title; }, {once:true});
+  const img = sheet.querySelector("img");
+  const go = () => setTimeout(() => window.print(), 50);
+  if (img.complete) go(); else { img.onload = go; img.onerror = go; }
+}

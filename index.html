@@ -120,6 +120,7 @@ button{cursor:pointer}
 .d-week button:disabled{opacity:.3;cursor:default}
 .d-week .today-btn{width:auto;padding:0 .8em;font-weight:600}
 .d-tools{display:flex;align-items:center;gap:.6em}
+.d-tools button{height:2.3em;border-radius:.4em;border:0;background:rgba(255,255,255,.14);color:inherit;padding:0 .8em;font-size:1em;font-weight:600}
 .d-tools select{height:2.3em;border-radius:.4em;border:0;background:rgba(255,255,255,.14);color:inherit;padding:0 .6em;font-size:1em}
 .d-tools select option{color:#141a2b;background:#fff}
 .d-stand{font-size:.85em;opacity:.8;text-align:right;white-space:nowrap}
@@ -165,8 +166,8 @@ button{cursor:pointer}
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="config.js?v=7"></script>
-<script src="core.js?v=7"></script>
+<script src="config.js?v=8"></script>
+<script src="core.js?v=8"></script>
 <script>
 let plan = {weeks:{}}; let loadedAt = null; let updatedAt = null;
 let state = {week:null, day:0, team:""};
@@ -221,6 +222,8 @@ async function copyText(){
   }
 }
 
+function doPrint(){ toast("Im Druckfenster „Als PDF speichern“ wählen (Handy: Teilen)."); printWeek(W(), state.week, {stand: standText()}); }
+
 /* ---------- mode ---------- */
 const mq = window.matchMedia("(min-width: 1000px)");
 function decideMode(){
@@ -256,7 +259,8 @@ function mobileView(){
     state.team ? null : el("div",{class:"m-days",role:"group","aria-label":"Wochentag"}, ...DSHORT.map((n,d)=>
       el("button",{class:"m-day","aria-pressed":String(state.day===d),onclick:()=>{state.day=d;render();}},
         d===today ? el("span",{class:"dot","aria-label":"heute"}) : null, el("b",{},n), el("small",{},dm(addDays(mon,d)))))),
-    el("div",{class:"m-tools"}, sel, el("button",{onclick:copyText,"aria-label":"Als Text für WhatsApp kopieren"},"Text kopieren")));
+    el("div",{class:"m-tools"}, sel, el("button",{onclick:copyText,"aria-label":"Als Text für WhatsApp kopieren"},"Text kopieren"),
+      el("button",{onclick:doPrint,"aria-label":"Woche als PDF speichern oder teilen"},"PDF")));
 
   const body = el("main",{class:"m-body"});
 
@@ -337,7 +341,7 @@ function desktopView(){
       el("div",{class:"range"}, `${dm(mon)} – ${dm(addDays(mon,4))}${addDays(mon,4).getFullYear()}`),
       el("button",{"aria-label":"Nächste Woche",disabled:i>=keys.length-1,onclick:()=>stepWeek(1)},"›"),
       (plan.weeks[cw] && state.week !== cw) ? el("button",{class:"today-btn",onclick:()=>{state.week=cw;render();}},"Diese Woche") : null),
-    el("div",{class:"d-tools"}, sel),
+    el("div",{class:"d-tools"}, sel, el("button",{onclick:doPrint,title:"Woche als PDF speichern, teilen oder drucken"},"PDF / Drucken")),
     el("div",{class:"d-stand"}, standText()));
 
   const weight = p => Math.max(1, ...[0,1,2,3,4].map(d => w.slots.filter(s=>s.p===p.id && s.d===d).length));
