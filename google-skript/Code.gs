@@ -23,7 +23,7 @@ const LOG_NAME = "Protokoll";
 const HEADER = ["Woche ab (Montag)","Tag","Platz","Mannschaft","Beginn","Dauer (Min.)","Offenes Ende","Platzanteil","Status","Hinweis","Art","Gegner"];
 const DAYS = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag"];
 const PITCHES = ["Kleinspielfeld","Rasenplatz 1","Rasenplatz 2","Stadion","Kunstrasen 1","Kunstrasen 2"];
-const SHARES = ["ganz","halb","viertel"];
+const SHARES = ["ganz","halb","viertel","1/3 d.H.","2/3 d.H."]; // d.H. = der Hälfte
 const STATUSES = ["findet statt","abgesagt","Platz gesperrt"];
 const ARTS = ["Training","Spiel"];
 
@@ -33,7 +33,7 @@ function doGet() {
     const props = PropertiesService.getScriptProperties().getProperties();
     const versions = {};
     Object.keys(props).forEach(function (k) { if (k.indexOf("v_") === 0) versions[k.slice(2)] = props[k]; });
-    return json_({ ok: true, rows: sh.getDataRange().getDisplayValues(), updated: props.LAST_SAVE || null, versions: versions, features: ["spiele"] });
+    return json_({ ok: true, rows: sh.getDataRange().getDisplayValues(), updated: props.LAST_SAVE || null, versions: versions, features: ["spiele", "drittel"] });
   } catch (err) {
     return json_({ ok: false, error: "lesen", detail: String(err) });
   }

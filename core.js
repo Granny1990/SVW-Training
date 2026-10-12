@@ -26,9 +26,10 @@ const TEAM_COLORS = {
 };
 /* Für Mannschaften, die nicht oben stehen: feste Farbe aus dem Namen. */
 const EXTRA_COLORS = ["#00838f","#ad1457","#ef6c00","#558b2f","#4527a0","#9e9d24","#6d4c41","#c2185b"];
-const SHARE_LABEL = {"1/2":"½ Platz","1/4":"¼ Platz"};
-const SHARE_SHORT = {"1/2":"½","1/4":"¼"};
-const SHARE_WORD = {"1/2":"halb","1/4":"viertel"};
+/* Platzanteile. "d.H." = der Hälfte: ⅓ bzw. ⅔ einer Platzhälfte. */
+const SHARE_LABEL = {"1/2":"½ Platz","1/4":"¼ Platz","h13":"⅓ d.H.","h23":"⅔ d.H."};
+const SHARE_SHORT = {"1/2":"½","1/4":"¼","h13":"⅓ d.H.","h23":"⅔ d.H."};
+const SHARE_WORD = {"1/2":"halb","1/4":"viertel","h13":"1/3 d.H.","h23":"2/3 d.H."};
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -131,7 +132,7 @@ function buildPlanFromRows(rowsIn){
     if (!tm || !team) continue;
     const dur = parseInt(r[C.dur],10); const game = C.art >= 0 && norm(r[C.art]) === "spiel";
     wk.slots.push({id:"r"+(n++), d, p:p.id, team, t:`${pad(+tm[1])}:${tm[2]}`, dur: dur>=15 && dur<=300 ? dur : game ? GAME_DUR : TRAIN_DUR,
-      ab: norm(r[C.ab]) === "ja", share: {halb:"1/2", viertel:"1/4"}[norm(r[C.share])],
+      ab: norm(r[C.ab]) === "ja", share: {"halb":"1/2", "viertel":"1/4", "1/3 d.h.":"h13", "2/3 d.h.":"h23"}[norm(r[C.share])],
       off: status === "abgesagt", note:(r[C.note]||"").trim() || undefined,
       game: game || undefined, opp: game ? ((r[C.opp]||"").trim() || undefined) : undefined});
   }
@@ -155,6 +156,7 @@ async function loadPlanData(){
 }
 
 /* ---------- logic ---------- */
+/* Überschneidungen (derzeit nicht angezeigt). */
 function conflicts(slots){
   const bad = new Set();
   for (let i=0;i<slots.length;i++) for (let j=i+1;j<slots.length;j++){

@@ -116,7 +116,6 @@ button{cursor:pointer}
 .slot .gm{font:700 10px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;padding:2px 4px;border-radius:3px}
 .slot.off{background:repeating-linear-gradient(135deg,var(--off-bg) 0 6px,var(--surface) 6px 12px)!important;color:var(--off)!important}
 .slot.off b,.slot.off span{text-decoration:line-through}
-.slot.warn{box-shadow:inset 0 0 0 2px var(--warn)}
 .slot.dragging-src{opacity:.35}
 .drag-ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:.95;width:160px}
 body.is-dragging,body.is-dragging *{cursor:grabbing!important}
@@ -127,7 +126,6 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important}
 .grid > .cell.is-today.pair-rasen,.grid > .cell.is-today.pair-kunst{background:var(--today)!important}
 .grid > .cell.closed-cell{background:repeating-linear-gradient(135deg,var(--off-bg) 0 8px,var(--surface) 8px 16px)!important}
 .grid > .cell.over{background:var(--accent-soft)!important}
-&gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 
 /* Dialog */
 .scrim{position:fixed;inset:0;background:rgba(5,10,25,.5);z-index:40;display:grid;place-items:center;padding:16px}
@@ -160,12 +158,13 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important}
 <div id="root"></div>
 <div id="dialogHost"></div>
 <div id="toastHost"></div>
-<script src="config.js?v=6"></script>
-<script src="core.js?v=6"></script>
+<script src="config.js?v=7"></script>
+<script src="core.js?v=7"></script>
 <script>
 const DEMO = location.hash === "#demo";
 let plan = {weeks:{}}, versions = {}, user = null, features = [];
-const gamesOk = () => DEMO || features.includes("spiele");
+const featureOk = f => DEMO || features.includes(f);
+const gamesOk = () => featureOk("spiele");
 let state = {week:null, dirty:new Set(), saving:false};
 let customTeams = [];
 try { customTeams = JSON.parse(store.get("svw-admin-teams") || "[]"); } catch { customTeams = []; }
@@ -250,7 +249,7 @@ function logout(){
 
 /* ---------- render ---------- */
 function render(){
-  const w = W(); const mon = parseISO(state.week); const today = todayIndex(); const bad = conflicts(w.slots);
+  const w = W(); const mon = parseISO(state.week); const today = todayIndex();
   const dirty = isDirty();
   const top = el("header",{class:"top"},
     el("div",{class:"brand"}, el("img",{src:"logo.svg",alt:""}), el("div",{}, el("small",{},DEMO ? "Demo – nichts wird gespeichert" : "SV Westfalia Rhynern"), el("b",{},"Trainingsplan · Admin"))),
@@ -280,8 +279,7 @@ function render(){
     palette,
     el("form",{class:"addteam",onsubmit:e=>{e.preventDefault(); const v=$("#newTeam").value.trim().slice(0,40); if(!v) return; if(!allTeams().includes(v)){ customTeams.push(v); store.set("svw-admin-teams", JSON.stringify(customTeams)); } $("#newTeam").value=""; render();}},
       el("input",{id:"newTeam",placeholder:"Neue Mannschaft","aria-label":"Neue Mannschaft"}), el("button",{type:"submit","aria-label":"Mannschaft hinzufügen"},"+")),
-    el("p",{class:"hint long"},"Eintrag anklicken: Zeit, Dauer, Absage ändern. Eintrag ziehen: verschieben. Mit gedrückter Strg-/Alt-Taste ziehen: kopieren."),
-    el("div",{class:"legend"}, el("span",{},"Orange Rand = Überschneidung")));
+    el("p",{class:"hint long"},"Eintrag anklicken: Zeit, Dauer, Absage ändern. Eintrag ziehen: verschieben. Mit gedrückter Strg-/Alt-Taste ziehen: kopieren."));
 
   const grid = el("div",{class:"grid"});
   grid.append(el("div",{class:"corner"}));
@@ -294,10 +292,10 @@ function render(){
       if (closed) cell.append(el("div",{class:"closedlabel"},"Gesperrt"));
       for (const s of w.slots.filter(s=>s.p===p.id && s.d===d).sort(byTime)){
         const [bg,fg] = colorOf(s.team);
-        const slot = el("div",{class:"slot"+(s.off?" off":"")+(bad.has(s.id)?" warn":""),style:`background:${bg};color:${fg}`,
+        const slot = el("div",{class:"slot"+(s.off?" off":""),style:`background:${bg};color:${fg}`,
           tabindex:"0",role:"button","data-id":s.id,
           "aria-label":`${s.team}${s.game?", "+gameLabel(s):""}, ${startLabel(s)} Uhr. Enter zum Bearbeiten.`,
-          title:`${s.team}${s.game?" · "+gameLabel(s):""} · ${startLabel(s)}${s.ab?"":"–"+fmt(toMin(s.t)+s.dur)} Uhr${s.share?" · "+SHARE_LABEL[s.share]:""}${bad.has(s.id)?" · Überschneidung":""}`},
+          title:`${s.team}${s.game?" · "+gameLabel(s):""} · ${startLabel(s)}${s.ab?"":"–"+fmt(toMin(s.t)+s.dur)} Uhr${s.share?" · "+SHARE_LABEL[s.share]:""}`},
           el("b",{},s.team), s.game ? el("em",{class:"gm",style:`background:${fg};color:${bg};font-style:normal`},"Spiel") : null,
           s.share ? el("i",{},SHARE_SHORT[s.share]) : null, el("span",{},startLabel(s)),
           (s.game && s.opp) || s.note ? el("div",{class:"note"},[s.game && s.opp ? "gg. "+s.opp : null, s.note].filter(Boolean).join(" · ")) : null);
@@ -392,7 +390,7 @@ function openDialog({slot, team, p, d, game}){
   const close = () => $("#dialogHost").replaceChildren();
   const seg = (key, opts) => { const wrap = el("div",{class:"seg"});
     const paint = () => [...wrap.children].forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.v===String(draft[key]))));
-    opts.forEach(([v,l]) => wrap.append(el("button",{type:"button","data-v":String(v),onclick:()=>{draft[key]=v;paint();}},l))); paint(); return wrap; };
+    opts.forEach(([v,l,dis]) => wrap.append(el("button",{type:"button","data-v":String(v),disabled:!!dis && draft[key]!==v,onclick:()=>{draft[key]=v;paint();}},l))); paint(); return wrap; };
   const err = el("div",{class:"err",role:"alert"});
   const quick = el("div",{class:"quick"}, ...["16:00","16:30","16:45","17:00","17:30","18:00","18:30","19:00","19:30","20:00"].map(t=>
     el("button",{type:"button",onclick:()=>{$("#f-time").value=t;}},t)));
@@ -427,7 +425,8 @@ function openDialog({slot, team, p, d, game}){
       el("div",{class:"field"}, el("label",{for:"f-dur"},"Dauer (Min.)"), el("input",{id:"f-dur",type:"number",min:"15",max:"300",step:"15",value:draft.dur})),
       el("div",{class:"full"}, quick),
       el("label",{class:"check full"}, el("input",{id:"f-ab",type:"checkbox",checked:!!draft.ab}), "Offenes Ende (z. B. „1.M ab 18:45“)"),
-      el("div",{class:"field full"}, el("label",{},"Platzanteil"), seg("share",[["","Ganz"],["1/2","½"],["1/4","¼"]])),
+      el("div",{class:"field full"}, el("label",{},"Platzanteil"), seg("share",[["","Ganz"],["1/2","½"],["1/4","¼"],["h13","⅓ d.H.",!featureOk("drittel")],["h23","⅔ d.H.",!featureOk("drittel")]]),
+        featureOk("drittel") ? null : el("small",{style:"color:var(--muted);font-size:12px"},"⅓/⅔ d.H. (der Hälfte): erst das Google-Skript aktualisieren.")),
       el("div",{class:"field full"}, el("label",{},"Status"), seg("off",[[false,"Findet statt"],[true,"Abgesagt"]])),
       el("div",{class:"field full"}, el("label",{for:"f-note"},"Hinweis (optional)"), el("input",{id:"f-note",value:draft.note,maxlength:"120",placeholder:"z. B. Treffpunkt Kabine 3"}))),
     err,

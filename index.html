@@ -50,7 +50,6 @@ button{cursor:pointer}
 .tag{display:inline-block;font:700 14px/1 var(--display);letter-spacing:.03em;padding:4px 7px;border-radius:5px;white-space:nowrap}
 .flag{font:600 11px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;padding:3px 5px;border-radius:4px;white-space:nowrap}
 .flag.off{background:var(--off-bg);color:var(--off)}
-.flag.warn{border:1px solid var(--warn);color:var(--warn)}
 .flag.game{background:var(--fg);color:var(--bg)}
 .gm{font-style:normal;font:700 .72em/1 var(--display);letter-spacing:.08em;text-transform:uppercase;padding:.2em .35em;border-radius:.25em;white-space:nowrap}
 .status{font-size:13px;color:var(--muted);text-align:center;margin:12px 16px}
@@ -142,7 +141,6 @@ button{cursor:pointer}
 .d-slot span{margin-left:auto;font:600 1.1em/1 var(--display);font-variant-numeric:tabular-nums;white-space:nowrap}
 .d-slot i{font-style:normal;font-size:.85em;opacity:.85}
 .d-slot.off{background:repeating-linear-gradient(135deg,var(--off-bg) 0 6px,var(--surface) 6px 12px)!important;color:var(--off)!important;text-decoration:line-through}
-.d-slot.warn{box-shadow:inset 0 0 0 2px var(--warn)}
 .d-slot.dim{opacity:.18}
 .d-slot .note{flex-basis:100%;font:500 .8em/1.2 var(--body);text-decoration:none}
 .d-slot.has-note{flex-wrap:wrap}
@@ -167,8 +165,8 @@ button{cursor:pointer}
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="config.js?v=6"></script>
-<script src="core.js?v=6"></script>
+<script src="config.js?v=7"></script>
+<script src="core.js?v=7"></script>
 <script>
 let plan = {weeks:{}}; let loadedAt = null; let updatedAt = null;
 let state = {week:null, day:0, team:""};
@@ -261,16 +259,16 @@ function mobileView(){
     el("div",{class:"m-tools"}, sel, el("button",{onclick:copyText,"aria-label":"Als Text für WhatsApp kopieren"},"Text kopieren")));
 
   const body = el("main",{class:"m-body"});
-  const bad = conflicts(w.slots);
-  if (state.team) body.append(...mobileTeam(w, mon, bad));
-  else body.append(...mobileDay(w, mon, bad));
+
+  if (state.team) body.append(...mobileTeam(w, mon));
+  else body.append(...mobileDay(w, mon));
 
   const foot = el("footer",{class:"m-foot"}, FOOTER,
     el("span",{}, el("a",{href:"#desktop",onclick:e=>{e.preventDefault();switchTo("desktop");}},"Zur Wochenübersicht (Desktop)"),
       CFG.EDIT_URL ? [" · ", el("a",{href:CFG.EDIT_URL,target:"_blank",rel:"noopener"},"Plan bearbeiten")] : null));
   return el("div",{}, top, body, foot);
 }
-function mobileDay(w, mon, bad){
+function mobileDay(w, mon){
   const d = state.day; const slots = w.slots.filter(s=>s.d===d);
   const out = [el("div",{class:"m-head"}, el("h2",{},`${DAYS[d]}, ${dm(addDays(mon,d))}`), el("span",{},countText(slots)))];
   for (const p of PITCHES){
@@ -286,7 +284,6 @@ function mobileDay(w, mon, bad){
         if (s.share) meta.append(el("span",{},SHARE_LABEL[s.share]));
         if (s.note) meta.append(el("span",{},s.note));
         if (s.off) meta.append(el("span",{class:"flag off"},"Abgesagt"));
-        if (bad.has(s.id)) meta.append(el("span",{class:"flag warn"},"Überschneidung"));
         ul.append(el("li",{class:"m-item"+(s.off?" off":"")},
           el("div",{class:"m-time"}, s.ab ? [el("small",{},"ab "), s.t] : s.t),
           el("button",{style:"border:0;background:none;padding:0","aria-label":`Woche von ${s.team} anzeigen`,onclick:()=>{setTeam(s.team);scrollTo(0,0);}}, teamTag(s.team)),
@@ -299,7 +296,7 @@ function mobileDay(w, mon, bad){
   }
   return out;
 }
-function mobileTeam(w, mon, bad){
+function mobileTeam(w, mon){
   const t = state.team; const mine = w.slots.filter(s=>s.team===t);
   const wrap = el("div",{class:"m-agenda"});
   for (let d=0; d<5; d++){
@@ -314,7 +311,6 @@ function mobileTeam(w, mon, bad){
       if (s.note) it.append(el("span",{class:"m-meta"},s.note));
       if (s.off) it.append(el("span",{class:"flag off"},"Abgesagt"));
       if (w.closed[`${s.p}-${d}`]) it.append(el("span",{class:"flag off"},"Platz gesperrt"));
-      if (bad.has(s.id)) it.append(el("span",{class:"flag warn"},"Überschneidung"));
       col.append(it);
     }
     wrap.append(el("section",{class:"m-pitch"}, el("div",{class:"m-dn"},DSHORT[d], el("small",{},dm(addDays(mon,d)))), col));
@@ -329,7 +325,7 @@ function countText(slots){
 /* ===== desktop ===== */
 function desktopView(){
   const w = W(); const mon = parseISO(state.week); const keys = weekKeys(); const i = keys.indexOf(state.week);
-  const today = todayIndex(); const bad = conflicts(w.slots); const cw = currentWeekKey();
+  const today = todayIndex(); const cw = currentWeekKey();
   const sel = el("select",{id:"d-team","aria-label":"Mannschaft hervorheben",onchange:e=>setTeam(e.target.value)},
     el("option",{value:""},"Alle Mannschaften"), ...allTeams().map(t=>el("option",{value:t},`Nur ${t} hervorheben`)));
   sel.value = state.team;
@@ -359,9 +355,9 @@ function desktopView(){
       for (const s of ps){
         const [bg,fg] = colorOf(s.team);
         const sub = [s.game && s.opp ? "gg. "+s.opp : null, s.note].filter(Boolean).join(" · ");
-        const cls = "d-slot"+(s.off?" off":"")+(bad.has(s.id)?" warn":"")+(state.team && s.team!==state.team?" dim":"")+(sub?" has-note":"");
+        const cls = "d-slot"+(s.off?" off":"")+(state.team && s.team!==state.team?" dim":"")+(sub?" has-note":"");
         cell.append(el("div",{class:cls,style:`background:${bg};color:${fg}`,
-          title:`${s.team}${s.game?" · "+gameLabel(s):""} · ${startLabel(s)}${s.ab?"":"–"+fmt(toMin(s.t)+s.dur)} Uhr${s.share?" · "+SHARE_LABEL[s.share]:""}${s.off?" · abgesagt":""}${bad.has(s.id)?" · Überschneidung prüfen":""}`},
+          title:`${s.team}${s.game?" · "+gameLabel(s):""} · ${startLabel(s)}${s.ab?"":"–"+fmt(toMin(s.t)+s.dur)} Uhr${s.share?" · "+SHARE_LABEL[s.share]:""}${s.off?" · abgesagt":""}`},
           el("b",{},s.team), s.game ? el("em",{class:"gm",style:`background:${fg};color:${bg}`},"Spiel") : null,
           s.share ? el("i",{},SHARE_SHORT[s.share]) : null, el("span",{}, startLabel(s)),
           sub ? el("div",{class:"note"},sub) : null));
@@ -372,9 +368,8 @@ function desktopView(){
 
   const foot = el("footer",{class:"d-foot"},
     el("span",{}, el("i",{class:"sw",style:"background:repeating-linear-gradient(135deg,var(--off-bg) 0 3px,transparent 3px 6px);border:1px solid var(--off)"}),"gesperrt / abgesagt"),
-    el("span",{}, el("i",{class:"sw",style:"border:2px solid var(--warn)"}),"Überschneidung prüfen"),
     el("span",{}, el("em",{class:"gm",style:"background:var(--fg);color:var(--bg);margin-right:.4em"},"Spiel"),"Heimspiel"),
-    el("span",{}, "¼ / ½ = Platzanteil"),
+    el("span",{}, "½ · ¼ · ⅓/⅔ d.H. = Platzanteil (d.H. = der Hälfte)"),
     el("span",{}, FOOTER),
     el("span",{class:"right"},
       CFG.EDIT_URL ? el("a",{href:CFG.EDIT_URL,target:"_blank",rel:"noopener"},"Plan bearbeiten") : null,

@@ -44,4 +44,4 @@ Für Spiele braucht das Sheet zwei neue Spalten (**Art**, **Gegner**). Die legt 
 4. **Bereitstellen → Bereitstellungen verwalten → Stift → Version: Neue Version → Bereitstellen**. Der Link bleibt gleich.
 5. Einmalig 75 → 90 Minuten: Oben in der Funktionsauswahl **trainingsAuf90Minuten** wählen und **Ausführen**. Im Ausführungsprotokoll steht, wie viele Trainings umgestellt wurden. Danach nicht noch einmal nötig.
 
-Bis Schritt 4 erledigt ist, kann die Admin-Seite nur Trainings speichern (die Auswahl „Spiel“ ist ausgegraut).
+Bis Schritt 4 erledigt ist, kann die Admin-Seite nur Trainings speichern. Die Auswahl „Spiel“ und die Platzanteile „⅓ d.H.“ / „⅔ d.H.“ (der Hälfte) sind bis dahin ausgegraut.
