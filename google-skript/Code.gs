@@ -67,7 +67,7 @@ function saveWeek_(req, who) {
   const week = String(req.week || "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(week)) return { ok: false, error: "week" };
   const monday = isoToDate_(week);
-  if (monday.getDay() !== 1) return { ok: false, error: "week" };
+  if (monday.getUTCDay() !== 1) return { ok: false, error: "week" };
 
   const props = PropertiesService.getScriptProperties();
   const vKey = "v_" + week;
@@ -86,7 +86,7 @@ function saveWeek_(req, who) {
   }
 
   const sh = sheet_();
-  const tz = Session.getScriptTimeZone();
+  const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
   const last = sh.getLastRow();
   const old = last > 1 ? sh.getRange(2, 1, last - 1, HEADER.length).getValues() : [];
   const keep = [];
@@ -94,8 +94,7 @@ function saveWeek_(req, who) {
     if (r.join("") === "") return;
     const wk = weekKeyOf_(r[0], tz);
     if (wk === week) return;
-    const d = toDate_(r[0]);
-    keep.push([d || r[0], r[1], r[2], r[3], timeText_(r[4], tz), r[5], r[6], r[7], r[8], r[9]]);
+    keep.push([wk ? isoToDate_(wk) : r[0], r[1], r[2], r[3], timeText_(r[4], tz), r[5], r[6], r[7], r[8], r[9]]);
   });
 
   const all = keep.concat(fresh);
@@ -161,20 +160,25 @@ function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function isoToDate_(s) { const p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+// Datum als 12 Uhr mittags UTC: zeigt in jeder Zeitzone Europas/Amerikas denselben Kalendertag.
+function isoToDate_(s) { const p = s.split("-"); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2], 12)); }
 
 function toDate_(v) {
   if (v instanceof Date) return v;
   const m = String(v || "").trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+  return m ? new Date(Date.UTC(+m[3], +m[2] - 1, +m[1], 12)) : null;
 }
 
+// Montag der Woche, in der Zeitzone der Tabelle. Sa/So zählen zur folgenden Woche
+// (repariert Montage, die früher durch eine Zeitzonen-Verschiebung als Sonntag gespeichert wurden).
 function weekKeyOf_(v, tz) {
-  const d = toDate_(v);
+  let d = toDate_(v);
   if (!d) return "";
-  const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
-  return Utilities.formatDate(mon, tz, "yyyy-MM-dd");
+  if (v instanceof Date) d = isoToDate_(Utilities.formatDate(v, tz, "yyyy-MM-dd"));
+  const dow = d.getUTCDay();
+  const shift = dow === 0 ? 1 : dow === 6 ? 2 : -((dow + 6) % 7);
+  const mon = new Date(d.getTime() + shift * 86400000);
+  return mon.toISOString().slice(0, 10);
 }
 
 function timeText_(v, tz) {

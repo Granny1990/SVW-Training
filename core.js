@@ -50,6 +50,9 @@ const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate(
 const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
 const dm = d => `${pad(d.getDate())}.${pad(d.getMonth()+1)}.`;
 const mondayOf = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return addDays(x, -((x.getDay()+6)%7)); };
+/* Woche zu einem Datum in Spalte "Woche ab". Sa/So zählen zur folgenden Woche
+   (ein Montag, der durch eine Zeitzonen-Verschiebung als Sonntag gespeichert wurde). */
+const weekKeyOf = d => { const wd = d.getDay(); return isoDate(mondayOf(wd===0 ? addDays(d,1) : wd===6 ? addDays(d,2) : d)); };
 const colorOf = team => TEAM_COLORS[team] || DEFAULT_COLOR;
 const pitch = id => PITCHES.find(p => p.id === id);
 const byTime = (a,b) => toMin(a.t)-toMin(b.t);
@@ -102,7 +105,7 @@ function buildPlanFromRows(rowsIn){
   const weeks = {}; let n = 0;
   for (const r of rows.slice(1)){
     const date = parseDate(r[C.w]); if (!date) continue;
-    const key = isoDate(mondayOf(date));
+    const key = weekKeyOf(date);
     const d = DAYS.findIndex(x => norm(x) === norm(r[C.d]) || norm(x).slice(0,2) === norm(r[C.d]).slice(0,2));
     const p = PITCHES.find(x => norm(x.name) === norm(r[C.p]));
     if (d < 0 || !p) continue;
