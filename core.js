@@ -10,7 +10,7 @@ const PITCHES = [
   {id:"k2", short:"Kunst 2", name:"Kunstrasen 2",   area:"Campus powered by Munk · Rhynernseite", pair:"kunst"}
 ];
 const TRAIN_DUR = 90, GAME_DUR = 120;
-const FOOTER = `Trainingszeit ${TRAIN_DUR} min. Änderungen witterungsbedingt vorbehalten.`;
+const FOOTER = "Änderungen witterungsbedingt vorbehalten.";
 const DAYS = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag"];
 const DSHORT = ["Mo","Di","Mi","Do","Fr"];
 /* Jede Mannschaft eine eigene Farbe. Schriftfarbe (hell/dunkel) wird nach Kontrast gewählt. */
@@ -238,7 +238,7 @@ function printWeek(w, weekKey, info){
         td.append(el("div",{class:"pr-s"+(s.off?" off":""),style:`background:${bg};color:${fg}`},
           el("b",{},s.team), s.game ? el("em",{style:`background:${fg};color:${bg}`},"Spiel") : null,
           s.share ? el("i",{},SHARE_SHORT[s.share]) : null,
-          el("span",{class:"t"}, s.ab ? "ab "+s.t : `${s.t}–${fmt(toMin(s.t)+s.dur)}`),
+          el("span",{class:"t"}, startLabel(s)),
           sub ? el("span",{class:"sub"},sub) : null));
       }
       tr.append(td);
@@ -246,8 +246,7 @@ function printWeek(w, weekKey, info){
     tbody.append(tr);
   }
   const foot = el("div",{class:"pr-foot"},
-    el("span",{}, FOOTER, " Platzanteil: ½ · ¼ · ⅓/⅔ d.H. (der Hälfte)."),
-    el("span",{}, "Aktuell: " + (location.host + location.pathname).replace(/[^/]*$/,"")));
+    el("span",{}, FOOTER, " Platzanteil: ½ · ¼ · ⅓/⅔ d.H. (der Hälfte)."));
   const sheet = el("div",{id:"printSheet"}, head, el("table",{class:"pr"}, thead, tbody), foot);
   document.getElementById("printSheet")?.remove(); document.body.append(sheet);
   const title = document.title;
